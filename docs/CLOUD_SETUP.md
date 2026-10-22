@@ -44,17 +44,17 @@ Cloud sessions clone from GitHub.
 At claude.ai/code (or the desktop app when starting a Cloud session), open the environment selector → **New environment**:
 
 - **Name:** `jalanjer`
-- **Network access:** **Custom**, keep the default allowlist included, and add to **Allowed domains**:
+- **Network access:** **Limited**, keep **Allow package managers** ticked, and paste into **Allowed domains**:
 
   ```
+  *.expo.dev
   expo.dev
-  api.expo.dev
-  u.expo.dev
+  exp.host
   download.geofabrik.de
   tiles.openfreemap.org
   ```
 
-  (The default **Trusted** list already covers npm, GitHub, Maven/Gradle, CocoaPods, Docker Hub, Cloudflare R2. Expo is not on it, which is why we use Custom.)
+  (**Allow package managers** covers npm, Maven/Gradle, CocoaPods and the like. Git clone/push goes through Anthropic's GitHub proxy. Expo is not covered, which is why it's listed.)
 - **Environment variables:** non-secret values only, e.g. `NODE_ENV=development`. Anyone using the environment can read them.
 - **Network secrets:** put `EXPO_TOKEN` here later (from expo.dev → Access tokens) so the session can start EAS builds without ever seeing the token.
 - **Setup script** (runs as root on Ubuntu 24.04, cached if it finishes in ~5 min; Node 22 is preinstalled):
