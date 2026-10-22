@@ -2,7 +2,7 @@
 const { defineConfig } = require('eslint/config');
 const expoConfig = require('eslint-config-expo/flat');
 
-// Files copied in by `npx beui-native add` (see CLAUDE.md). They write
+// Files copied in by `npx beui-native add`. They write
 // Reanimated shared values with `.value = ...` and read refs during render,
 // which the React Compiler lint rules flag. They work at runtime (the compiler
 // simply skips those components), so we keep them as upstream ships them.
