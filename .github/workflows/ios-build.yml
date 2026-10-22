@@ -45,14 +45,18 @@ jobs:
       - name: Generate the native iOS project
         run: npx expo prebuild --platform ios --clean --no-install
 
+      # The .xcworkspace only appears after `pod install`, so take the name
+      # from the .xcodeproj that prebuild created (e.g. ios/JalanJer.xcodeproj).
       - name: Find workspace and scheme
         id: project
         run: |
-          workspace=$(ls -d ios/*.xcworkspace | head -n 1)
-          scheme=$(basename "$workspace" .xcworkspace)
-          echo "workspace=$workspace" >> "$GITHUB_OUTPUT"
+          set -euo pipefail
+          projects=(ios/*.xcodeproj)
+          test -d "${projects[0]}" || { echo "::error::No .xcodeproj in ios/"; exit 1; }
+          scheme=$(basename "${projects[0]}" .xcodeproj)
+          echo "workspace=ios/$scheme.xcworkspace" >> "$GITHUB_OUTPUT"
           echo "scheme=$scheme" >> "$GITHUB_OUTPUT"
-          echo "Workspace: $workspace, scheme: $scheme"
+          echo "Workspace: ios/$scheme.xcworkspace, scheme: $scheme"
 
       - name: Cache CocoaPods
         uses: actions/cache@v4
