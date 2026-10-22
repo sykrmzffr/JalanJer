@@ -81,19 +81,29 @@ jobs:
       - name: Build (xcodebuild archive, unsigned)
         run: |
           set -o pipefail
-          xcodebuild archive \
-            -workspace "${{ steps.project.outputs.workspace }}" \
-            -scheme "${{ steps.project.outputs.scheme }}" \
-            -configuration ${{ matrix.configuration }} \
-            -sdk iphoneos \
-            -destination 'generic/platform=iOS' \
-            -archivePath "$RUNNER_TEMP/app.xcarchive" \
-            -clonedSourcePackagesDirPath ~/spm \
-            CODE_SIGNING_ALLOWED=NO \
-            CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGN_IDENTITY="" \
-            | tee "$RUNNER_TEMP/xcodebuild.log" \
-            | grep -E 'error:|\*\* (ARCHIVE|BUILD)' || true
+          archive() {
+            xcodebuild archive \
+              -workspace "${{ steps.project.outputs.workspace }}" \
+              -scheme "${{ steps.project.outputs.scheme }}" \
+              -configuration ${{ matrix.configuration }} \
+              -sdk iphoneos \
+              -destination 'generic/platform=iOS' \
+              -archivePath "$RUNNER_TEMP/app.xcarchive" \
+              -clonedSourcePackagesDirPath ~/spm \
+              CODE_SIGNING_ALLOWED=NO \
+              CODE_SIGNING_REQUIRED=NO \
+              CODE_SIGN_IDENTITY="" \
+              | tee "$RUNNER_TEMP/xcodebuild.log" \
+              | grep -E 'error:|\*\* (ARCHIVE|BUILD)' || true
+          }
+          archive
+          # Expo's module scan has a fixed 5-second limit and can time out on a slow
+          # runner ("Build again to retry the scan"). Retry once, only for that error.
+          if [ ! -d "$RUNNER_TEMP/app.xcarchive/Products/Applications" ] \
+            && grep -q "Scanning for @ExpoModule classes didn't complete" "$RUNNER_TEMP/xcodebuild.log"; then
+            echo "::warning::Expo module scan timed out; retrying the archive once."
+            archive
+          fi
           test -d "$RUNNER_TEMP/app.xcarchive/Products/Applications" || {
             echo "::error::Archive failed. Last 200 lines of the log:"
             tail -n 200 "$RUNNER_TEMP/xcodebuild.log"
