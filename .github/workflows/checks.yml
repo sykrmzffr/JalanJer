@@ -1,0 +1,26 @@
+# Fast checks on a free Linux runner: types, lint, design tokens, Expo doctor.
+name: Checks
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Design tokens CSS is up to date
+        run: npm run tokens:check
+      - name: Typecheck
+        run: npx tsc --noEmit
+      - name: Lint
+        run: npx expo lint
+      - name: Expo doctor
+        run: npx expo-doctor
