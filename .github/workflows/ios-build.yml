@@ -16,6 +16,8 @@ concurrency:
 env:
   CI: '1'
   EXPO_NO_TELEMETRY: '1'
+  # Baked into the Release build's JS. Empty = Sentry off. See docs/SENTRY.md.
+  EXPO_PUBLIC_SENTRY_DSN: ${{ vars.EXPO_PUBLIC_SENTRY_DSN }}
 
 jobs:
   build:

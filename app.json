@@ -43,7 +43,13 @@
           "locationWhenInUsePermission": "JalanJer! uses your location to show where you are on the map and to guide you while driving."
         }
       ],
-      "@maplibre/maplibre-react-native"
+      "@maplibre/maplibre-react-native",
+      [
+        "@sentry/react-native",
+        {
+          "disableAutoUpload": true
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

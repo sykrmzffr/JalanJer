@@ -6,13 +6,16 @@ import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { FpsOverlay } from '@/dev/fps-overlay';
+import { initSentry, wrapRoot } from '@/lib/sentry';
+
+initSentry();
 
 // Keep the splash up until the map has drawn, so the splash fades straight into
 // the real map instead of an empty screen. The home screen hides it.
 SplashScreen.preventAutoHideAsync();
 SplashScreen.setOptions({ fade: true, duration: 250 });
 
-export default function RootLayout() {
+function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <StatusBar style="auto" />
@@ -21,3 +24,5 @@ export default function RootLayout() {
     </GestureHandlerRootView>
   );
 }
+
+export default wrapRoot(RootLayout);
