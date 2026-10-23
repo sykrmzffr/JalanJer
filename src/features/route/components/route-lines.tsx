@@ -1,4 +1,4 @@
-import { GeoJSONSource, Layer, Marker } from '@maplibre/maplibre-react-native';
+import { type FilterSpecification, GeoJSONSource, Layer, Marker } from '@maplibre/maplibre-react-native';
 import { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
@@ -22,18 +22,22 @@ const SOURCE_ID = 'routes';
 export function RouteLines({ routes, selectedId, onSelect }: RouteLinesProps) {
   const colors = useColors();
 
+  // Geometry only changes when new routes arrive. Selecting a route just swaps the
+  // layer filters below, so the route shapes aren't sent to the map again.
   const data = useMemo<GeoJSON.FeatureCollection>(
     () => ({
       type: 'FeatureCollection',
       features: routes.map((route) => ({
         type: 'Feature',
         id: route.id,
-        properties: { routeId: route.id, selected: route.id === selectedId ? 1 : 0 },
+        properties: { routeId: route.id },
         geometry: { type: 'LineString', coordinates: route.coordinates },
       })),
     }),
-    [routes, selectedId],
+    [routes],
   );
+  const isSelected: FilterSpecification = ['==', ['get', 'routeId'], selectedId ?? ''];
+  const isAlternative: FilterSpecification = ['!=', ['get', 'routeId'], selectedId ?? ''];
 
   const bubbles = useMemo(() => bubblePositions(routes), [routes]);
   const fastest = useMemo(
@@ -60,7 +64,7 @@ export function RouteLines({ routes, selectedId, onSelect }: RouteLinesProps) {
           type="line"
           id="routes-alt-casing"
           source={SOURCE_ID}
-          filter={['==', ['get', 'selected'], 0]}
+          filter={isAlternative}
           layout={lineLayout}
           paint={{ 'line-color': colors.routeAlternative, 'line-width': 10, 'line-opacity': 0.5 }}
         />
@@ -68,7 +72,7 @@ export function RouteLines({ routes, selectedId, onSelect }: RouteLinesProps) {
           type="line"
           id="routes-alt"
           source={SOURCE_ID}
-          filter={['==', ['get', 'selected'], 0]}
+          filter={isAlternative}
           layout={lineLayout}
           paint={{ 'line-color': colors.routeAlternative, 'line-width': 6 }}
         />
@@ -76,7 +80,7 @@ export function RouteLines({ routes, selectedId, onSelect }: RouteLinesProps) {
           type="line"
           id="routes-selected-casing"
           source={SOURCE_ID}
-          filter={['==', ['get', 'selected'], 1]}
+          filter={isSelected}
           layout={lineLayout}
           paint={{ 'line-color': colors.onRoute, 'line-width': 11 }}
         />
@@ -84,7 +88,7 @@ export function RouteLines({ routes, selectedId, onSelect }: RouteLinesProps) {
           type="line"
           id="routes-selected"
           source={SOURCE_ID}
-          filter={['==', ['get', 'selected'], 1]}
+          filter={isSelected}
           layout={lineLayout}
           paint={{ 'line-color': colors.route, 'line-width': 7 }}
         />
