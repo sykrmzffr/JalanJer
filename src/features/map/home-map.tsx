@@ -2,7 +2,7 @@ import { Camera, type CameraRef, Map, Marker, NativeUserLocation } from '@maplib
 import { useRouter } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Linking, StyleSheet, Text, useColorScheme, useWindowDimensions, View } from 'react-native';
+import { BackHandler, Linking, StyleSheet, Text, useColorScheme, useWindowDimensions, View } from 'react-native';
 import { useSharedValue, withSpring } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -126,6 +126,18 @@ export function HomeMap() {
     setFollowing(true);
     setPanelHeight(0);
   };
+  // Android back button closes the route preview instead of leaving the app.
+  useEffect(() => {
+    if (!destination) return;
+    const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
+      setDestination(null);
+      setFollowing(true);
+      setPanelHeight(0);
+      return true;
+    });
+    return () => subscription.remove();
+  }, [destination, setDestination]);
+
   // Showing a picked place pauses "follow me" until you tap recenter.
   const [recenteredAt, setRecenteredAt] = useState(0);
   const followActive = following && (!destination || recenteredAt > pickedAt);
