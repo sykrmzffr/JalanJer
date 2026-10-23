@@ -1,0 +1,143 @@
+# Builds the iOS app on a GitHub-hosted Mac and uploads unsigned .ipa files.
+# Free for public repos. Install the .ipa with Sideloadly: docs/IPHONE_INSTALL.md
+#
+#   Debug   = development build (expo-dev-client). Loads JS from Metro on your PC.
+#   Release = JS bundled inside the app. Use this to judge real speed.
+name: iOS build
+
+on:
+  workflow_dispatch:
+  pull_request:
+
+concurrency:
+  group: ios-build-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CI: '1'
+  EXPO_NO_TELEMETRY: '1'
+  # Baked into the Release build's JS. Empty = Sentry off. See docs/SENTRY.md.
+  EXPO_PUBLIC_SENTRY_DSN: ${{ vars.EXPO_PUBLIC_SENTRY_DSN }}
+
+jobs:
+  build:
+    name: iOS ${{ matrix.configuration }}
+    runs-on: macos-latest
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        configuration: [Debug, Release]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install JS dependencies
+        run: npm ci
+
+      - name: Generate the native iOS project
+        run: npx expo prebuild --platform ios --clean --no-install
+
+      # The .xcworkspace only appears after `pod install`, so take the name
+      # from the .xcodeproj that prebuild created (e.g. ios/JalanJer.xcodeproj).
+      - name: Find workspace and scheme
+        id: project
+        run: |
+          set -euo pipefail
+          projects=(ios/*.xcodeproj)
+          test -d "${projects[0]}" || { echo "::error::No .xcodeproj in ios/"; exit 1; }
+          scheme=$(basename "${projects[0]}" .xcodeproj)
+          echo "workspace=ios/$scheme.xcworkspace" >> "$GITHUB_OUTPUT"
+          echo "scheme=$scheme" >> "$GITHUB_OUTPUT"
+          echo "Workspace: ios/$scheme.xcworkspace, scheme: $scheme"
+
+      - name: Cache CocoaPods
+        uses: actions/cache@v4
+        with:
+          path: |
+            ios/Pods
+            ~/Library/Caches/CocoaPods
+          key: pods-${{ runner.os }}-${{ hashFiles('package-lock.json', 'app.json') }}
+          restore-keys: pods-${{ runner.os }}-
+
+      - name: Cache Swift packages
+        uses: actions/cache@v4
+        with:
+          path: ~/spm
+          key: spm-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+          restore-keys: spm-${{ runner.os }}-
+
+      - name: Install pods
+        working-directory: ios
+        run: pod install
+
+      - name: Build (xcodebuild archive, unsigned)
+        run: |
+          set -o pipefail
+          archive() {
+            xcodebuild archive \
+              -workspace "${{ steps.project.outputs.workspace }}" \
+              -scheme "${{ steps.project.outputs.scheme }}" \
+              -configuration ${{ matrix.configuration }} \
+              -sdk iphoneos \
+              -destination 'generic/platform=iOS' \
+              -archivePath "$RUNNER_TEMP/app.xcarchive" \
+              -clonedSourcePackagesDirPath ~/spm \
+              CODE_SIGNING_ALLOWED=NO \
+              CODE_SIGNING_REQUIRED=NO \
+              CODE_SIGN_IDENTITY="" \
+              | tee "$RUNNER_TEMP/xcodebuild.log" \
+              | grep -E 'error:|\*\* (ARCHIVE|BUILD)' || true
+          }
+          archive
+          # Expo's module scan has a fixed 5-second limit and can time out on a slow
+          # runner ("Build again to retry the scan"). Retry once, only for that error.
+          if [ ! -d "$RUNNER_TEMP/app.xcarchive/Products/Applications" ] \
+            && grep -q "Scanning for @ExpoModule classes didn't complete" "$RUNNER_TEMP/xcodebuild.log"; then
+            echo "::warning::Expo module scan timed out; retrying the archive once."
+            archive
+          fi
+          test -d "$RUNNER_TEMP/app.xcarchive/Products/Applications" || {
+            echo "::error::Archive failed. Last 200 lines of the log:"
+            tail -n 200 "$RUNNER_TEMP/xcodebuild.log"
+            exit 1
+          }
+
+      - name: Package unsigned .ipa
+        id: ipa
+        run: |
+          cd "$RUNNER_TEMP"
+          rm -rf Payload && mkdir Payload
+          cp -R app.xcarchive/Products/Applications/*.app Payload/
+          # On pull requests GITHUB_SHA is GitHub's temporary merge commit; name the
+          # file after the branch's own commit so it matches what you see in the PR.
+          sha="${{ github.event.pull_request.head.sha || github.sha }}"
+          name="JalanJer-${{ matrix.configuration }}-${sha::7}-unsigned.ipa"
+          zip -qry "$name" Payload
+          echo "path=$RUNNER_TEMP/$name" >> "$GITHUB_OUTPUT"
+          echo "name=$name" >> "$GITHUB_OUTPUT"
+          ls -lh "$name"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.ipa.outputs.name }}
+          path: ${{ steps.ipa.outputs.path }}
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload build log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: xcodebuild-log-${{ matrix.configuration }}
+          path: ${{ runner.temp }}/xcodebuild.log
+          if-no-files-found: ignore
