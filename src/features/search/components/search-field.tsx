@@ -10,10 +10,22 @@ type SearchFieldProps = {
   onSubmit: () => void;
   placeholder: string;
   loading: boolean;
+  /** Voice search state; shows the mic when the field is empty. */
+  listening: boolean;
+  onMicPress: () => void;
 };
 
 /** Waze-style pill: back chevron, text field, then a spinner or clear button. */
-export function SearchField({ value, onChangeText, onBack, onSubmit, placeholder, loading }: SearchFieldProps) {
+export function SearchField({
+  value,
+  onChangeText,
+  onBack,
+  onSubmit,
+  placeholder,
+  loading,
+  listening,
+  onMicPress,
+}: SearchFieldProps) {
   const colors = useColors();
   return (
     <View style={[styles.pill, { backgroundColor: colors.surfaceContainer }]}>
@@ -30,7 +42,7 @@ export function SearchField({ value, onChangeText, onBack, onSubmit, placeholder
         value={value}
         onChangeText={onChangeText}
         onSubmitEditing={onSubmit}
-        placeholder={placeholder}
+        placeholder={listening ? 'Listening…' : placeholder}
         placeholderTextColor={colors.onSurfaceVariant}
         autoFocus
         autoCorrect={false}
@@ -40,7 +52,21 @@ export function SearchField({ value, onChangeText, onBack, onSubmit, placeholder
         selectionColor={colors.primary}
         style={[styles.input, { color: colors.onSurface }]}
       />
-      {loading ? (
+      {listening || value.length === 0 ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={listening ? 'Stop voice search' : 'Search by voice'}
+          onPress={onMicPress}
+          hitSlop={8}
+          style={[styles.iconButton, listening && [styles.listening, { backgroundColor: colors.error }]]}
+        >
+          <Icon
+            name={{ ios: 'mic.fill', android: 'mic' }}
+            size={20}
+            color={listening ? colors.onError : colors.onSurface}
+          />
+        </Pressable>
+      ) : loading ? (
         <ActivityIndicator style={styles.iconButton} color={colors.onSurfaceVariant} />
       ) : value.length > 0 ? (
         <Pressable
@@ -71,5 +97,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  listening: { borderRadius: radius.full },
   input: { ...typography.bodyLarge, flex: 1, paddingVertical: spacing.md },
 });

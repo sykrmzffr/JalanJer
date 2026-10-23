@@ -218,7 +218,13 @@ export function HomeMap() {
         <BottomSheet
           height={sheetHeight}
           detents={detents}
-          header={<HomeSheetHeader onSearchPress={openSearch} onPlacePress={onChipPress} />}
+          header={
+            <HomeSheetHeader
+              onSearchPress={openSearch}
+              onVoicePress={() => router.push({ pathname: '/search', params: { voice: '1' } })}
+              onPlacePress={onChipPress}
+            />
+          }
         >
           <RecentsList onPlacePress={goTo} bottomInset={insets.bottom + spacing.lg} />
         </BottomSheet>

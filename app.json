@@ -49,6 +49,16 @@
         {
           "disableAutoUpload": true
         }
+      ],
+      [
+        "expo-speech-recognition",
+        {
+          "microphonePermission": "JalanJer! uses the microphone when you tap the mic to search by voice.",
+          "speechRecognitionPermission": "JalanJer! turns what you say into a search when you tap the mic.",
+          "androidSpeechServicePackages": [
+            "com.google.android.googlequicksearchbox"
+          ]
+        }
       ]
     ],
     "experiments": {

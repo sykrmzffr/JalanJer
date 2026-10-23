@@ -1,7 +1,7 @@
 import { FlashList } from '@shopify/flash-list';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Keyboard, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -17,6 +17,7 @@ import { PlaceRow, SwipeToDelete } from './components/place-row';
 import { SearchField } from './components/search-field';
 import { formatDistance, type RankedResult } from './core/search-core';
 import { useSearch } from './use-search';
+import { useVoiceSearch } from './use-voice-search';
 import { useUserCoordinate } from './use-user-coordinate';
 
 /** What picking a place does: drive there, or store it as Home/Work. */
@@ -40,7 +41,7 @@ const ICONS = {
  * Recents like Waze; typing shows on-device matches instantly and server
  * results ranked by text match and distance.
  */
-export function SearchScreen({ mode }: { mode: SearchMode }) {
+export function SearchScreen({ mode, startWithVoice = false }: { mode: SearchMode; startWithVoice?: boolean }) {
   const router = useRouter();
   const colors = useColors();
   const insets = useSafeAreaInsets();
@@ -84,6 +85,16 @@ export function SearchScreen({ mode }: { mode: SearchMode }) {
     setQuery(text);
     if (text.length > 0 && category) setCategory(null);
   };
+
+  const voice = useVoiceSearch(onChangeText);
+  // Opened from the mic on the map: start listening straight away, once.
+  const voiceAutoStarted = useRef(false);
+  useEffect(() => {
+    if (startWithVoice && !voiceAutoStarted.current) {
+      voiceAutoStarted.current = true;
+      voice.start();
+    }
+  }, [startWithVoice, voice]);
 
   const renderResult = ({ item }: { item: RankedResult }) => {
     const isSaved = savedIds.has(item.id);
@@ -134,6 +145,12 @@ export function SearchScreen({ mode }: { mode: SearchMode }) {
           onSubmit={() => results[0] && pick(results[0])}
           placeholder={PLACEHOLDER[mode]}
           loading={status === 'loading'}
+          listening={voice.state === 'listening'}
+          onMicPress={() => {
+            Haptics.selectionAsync();
+            if (voice.state === 'listening') voice.stop();
+            else voice.start();
+          }}
         />
       </View>
       {mode === 'go' && (
@@ -145,6 +162,11 @@ export function SearchScreen({ mode }: { mode: SearchMode }) {
             if (next) setQuery('');
           }}
         />
+      )}
+      {voice.state === 'error' && voice.error && (
+        <View style={[styles.banner, { backgroundColor: colors.surfaceContainerHigh }]}>
+          <Text style={[typography.bodyMedium, styles.bannerText, { color: colors.onSurface }]}>{voice.error}</Text>
+        </View>
       )}
       {status === 'error' && (
         <Pressable
