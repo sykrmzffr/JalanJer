@@ -39,6 +39,10 @@ or config plugins, never in those folders.
 - `src/components/`, `src/hooks/`, `src/primitives/`, `src/styles/motion.ts`: beUI Native source copied in
   by its CLI. Ours to edit, but keep edits small and commented so updates stay easy.
 - `src/dev/` development-only tools (FPS overlay).
+- `src/stores/` Zustand stores persisted to MMKV (`src/lib/storage.ts`): places, settings.
+- `src/components/sheet/` the UI-thread bottom sheet; `src/components/icon/` SF Symbols / Material Symbols.
+- Animations: write shared values with `.get()`/`.set()` (React Compiler lint rule), and put
+  gesture callbacks in worklets so nothing waits on the JS thread.
 
 ## Commands
 

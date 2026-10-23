@@ -118,7 +118,10 @@ jobs:
           cd "$RUNNER_TEMP"
           rm -rf Payload && mkdir Payload
           cp -R app.xcarchive/Products/Applications/*.app Payload/
-          name="JalanJer-${{ matrix.configuration }}-${GITHUB_SHA::7}-unsigned.ipa"
+          # On pull requests GITHUB_SHA is GitHub's temporary merge commit; name the
+          # file after the branch's own commit so it matches what you see in the PR.
+          sha="${{ github.event.pull_request.head.sha || github.sha }}"
+          name="JalanJer-${{ matrix.configuration }}-${sha::7}-unsigned.ipa"
           zip -qry "$name" Payload
           echo "path=$RUNNER_TEMP/$name" >> "$GITHUB_OUTPUT"
           echo "name=$name" >> "$GITHUB_OUTPUT"
