@@ -1,0 +1,53 @@
+{
+  "expo": {
+    "name": "JalanJer!",
+    "slug": "jalanjer",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "jalanjer",
+    "userInterfaceStyle": "automatic",
+    "ios": {
+      "bundleIdentifier": "com.sykrmzffr.jalanjer",
+      "supportsTablet": false,
+      "infoPlist": {
+        "CADisableMinimumFrameDurationOnPhone": true
+      }
+    },
+    "android": {
+      "package": "com.sykrmzffr.jalanjer",
+      "adaptiveIcon": {
+        "backgroundColor": "#E6F4FE",
+        "foregroundImage": "./assets/images/android-icon-foreground.png",
+        "backgroundImage": "./assets/images/android-icon-background.png",
+        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#FFFFFF",
+          "image": "./assets/images/splash-icon.png",
+          "imageWidth": 76,
+          "dark": {
+            "backgroundColor": "#111315"
+          }
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "JalanJer! uses your location to show where you are on the map and to guide you while driving."
+        }
+      ],
+      "@maplibre/maplibre-react-native"
+    ],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    }
+  }
+}
