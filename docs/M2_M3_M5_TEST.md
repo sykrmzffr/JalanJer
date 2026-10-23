@@ -29,6 +29,9 @@ run.** About 20 minutes.
 - [ ] Turn on airplane mode, type something: a red "Can't reach search" bar with
       **Try again**. Your recent and saved places still match.
 - [ ] Recents (on the search screen and in the map sheet): swipe a row left → **Delete**.
+- [ ] **Voice**: tap the mic on the map's "Where to?" row. Allow the microphone. Say
+      "KL Eco City" (or anything). Words should appear in the field and results follow.
+      Try a Malay name too, e.g. "Jalan Tun Razak". Tell me how well it understood you.
 
 ## B. Route preview (Milestone 3)
 

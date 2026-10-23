@@ -21,8 +21,10 @@ How place search works, which server it uses, and what still needs checking on a
 - Picking a result puts a pin on the map and shows a card with the name and address.
   Routes to it come in Milestone 3.
 
-Not done yet: **voice search** (the mic). It needs a speech-recognition library, which means
-a new native build, so it's planned as its own step.
+- **Voice search**: tap the mic (in the search field, or on the map's "Where to?" row) and
+  say a place. It uses the phone's own speech recognition (Apple on iPhone, Google on
+  Android), trying Malay first and English if Malay isn't available. How well it handles
+  Malaysian place names is **untested**.
 
 ## Which search server
 
