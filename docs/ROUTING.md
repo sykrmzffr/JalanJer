@@ -75,3 +75,20 @@ something looks wrong:
   (drawn by MapLibre on the GPU).
 - `src/features/route/components/route-preview-panel.tsx`: the bottom panel.
 - `src/stores/settings-store.ts`: remembered Avoid choices.
+
+## Toll prices: where the numbers could come from (research, 2026-10-23)
+
+Showing **RM per route** needs two things: (1) official rates, and (2) knowing which toll
+plazas a route passes. Neither is done yet. What I found:
+
+| Source | What it is | Problem |
+|---|---|---|
+| **Lembaga Lebuhraya Malaysia (LLM) toll rate lookup**, <http://kadartol.llm.gov.my/> | The Malaysian Highway Authority's own tool: pick highway, entry and exit plaza, get the rate per vehicle class | Web page, not a data feed. A search snippet suggested some pages may not be fully current. |
+| **data.gov.my dataset** "Senarai Kadar Tol Semasa Mengikut Lebuhraya", <https://archive.data.gov.my/data/dataset/senarai-kadar-tol-semasa-mengikut-lebuhraya> | Official spreadsheet (XLSX) of toll rates by highway, source LLM | Metadata says last updated **23 Aug 2021**, so likely out of date. |
+| Highway operators (e.g. PLUS) | Publish their own rates | One site per operator; formats differ. |
+
+Plan when we get to it: build our table from LLM's figures (with the date checked), cover
+Klang Valley highways + PLUS first, store it in the app as data with a "rates as of" date,
+and match plazas along the route using OpenStreetMap toll booth locations. Show
+"≈ RM x.xx" only when every plaza on the route is in the table; otherwise just "Toll".
+Never guess a price.
