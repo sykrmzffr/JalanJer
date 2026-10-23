@@ -33,7 +33,9 @@ or config plugins, never in those folders.
 ## Layout
 
 - `src/app/` routes (Expo Router). Keep non-route code out of it.
-- `src/features/<feature>/` feature code (e.g. `features/map`).
+- `src/features/<feature>/` feature code: `map` (home map, controls), `home-sheet`, `search` (Milestone 2,
+  Photon), `route` (Milestone 3 route preview, Valhalla), `settings` (Milestone 5 screens).
+  Pure logic lives in `core/` folders (no React Native imports) with `*.test.ts` next to it.
 - `src/theme/` design tokens: M3 color roles (light/dark), spacing, radius, typography, touch targets.
   `src/styles/theme.css` is **generated** from `src/theme/colors.ts` by `npm run tokens`.
 - `src/components/`, `src/hooks/`, `src/primitives/`, `src/styles/motion.ts`: beUI Native source copied in
@@ -50,6 +52,7 @@ or config plugins, never in those folders.
 npm start                    # Metro for the dev build (npx expo start --dev-client)
 npx tsc --noEmit             # typecheck
 npx expo lint                # lint
+npm test                     # unit tests (Node's built-in runner; src/**/*.test.ts, tsconfig.test.json)
 npx expo-doctor              # Expo config/dependency checks (needs reactnative.directory)
 npm run tokens               # regenerate src/styles/theme.css after editing src/theme/colors.ts
 npx expo install <pkg>       # add a dependency (picks SDK-compatible versions)
@@ -57,7 +60,15 @@ npx beui-native add <slug>   # add a beUI Native component (needs beui.dev)
 npx expo export --platform ios   # bundle JS without a Mac (sanity check)
 ```
 
-Run typecheck and lint before declaring work done. iOS builds: push and let the `iOS build` workflow run, or
+Run `npm run typecheck` (app + tests), lint and `npm test` before declaring work done. iOS builds: push and let the `iOS build` workflow run, or
 start it from the Actions tab. Installing on the iPhone: `docs/IPHONE_INSTALL.md`.
 Android `.apk` builds run on a free Linux runner (`.github/workflows/android-build.yml`); install guide:
 `docs/ANDROID_INSTALL.md`.
+
+## Servers and docs
+
+Search uses Photon, routing uses Valhalla. Both default to free public servers for testing
+(`EXPO_PUBLIC_PHOTON_URL` / `EXPO_PUBLIC_VALHALLA_URL` switch them; see `docs/SEARCH.md`, `docs/ROUTING.md`).
+Self-hosting plan: `docs/SERVER_SETUP.md`. Turn-by-turn research: `docs/NAVIGATION_PLAN.md`.
+Milestone 4 (turn-by-turn) waits for the iPhone speed checks in GitHub issue #4.
+Never invent data (toll prices, speed limits): use sourced data or leave the feature out.
