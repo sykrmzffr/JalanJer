@@ -61,7 +61,9 @@ export function MapControls({
     );
     return {
       opacity,
-      transform: [{ translateY: -(sheetHeight.get() + spacing.lg) }],
+      // Once fully faded, park the row at the screen bottom, behind the sheet, so the
+      // invisible buttons can't catch taps meant for the map.
+      transform: [{ translateY: opacity === 0 ? 0 : -(sheetHeight.get() + spacing.lg) }],
     };
   });
 
