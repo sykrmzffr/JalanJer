@@ -25,13 +25,25 @@ type MapControlsProps = {
   following: boolean;
   onRecenter: () => void;
   speedKmh: number;
+  /**
+   * Don't render the bottom row (route preview). When faded out it is invisible
+   * but would still catch taps meant for the map.
+   */
+  hideBottomRow?: boolean;
 };
 
 // The bottom row fades out once the sheet is dragged this far above its collapsed height.
 const BOTTOM_ROW_FADE_DISTANCE = 120;
 
 /** Floating buttons over the map, laid out like Waze's home screen. */
-export function MapControls({ sheetHeight, collapsedSheetHeight, following, onRecenter, speedKmh }: MapControlsProps) {
+export function MapControls({
+  sheetHeight,
+  collapsedSheetHeight,
+  following,
+  onRecenter,
+  speedKmh,
+  hideBottomRow = false,
+}: MapControlsProps) {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const soundMuted = useSettingsStore((s) => s.soundMuted);
@@ -103,19 +115,21 @@ export function MapControls({ sheetHeight, collapsedSheetHeight, following, onRe
       </View>
 
       {/* Bottom row: speedometer and report button, riding on top of the sheet. */}
-      <Animated.View pointerEvents="box-none" style={[styles.bottomRow, bottomRowStyle]}>
-        {/* Empty spacer keeps the report button on the right when the speedometer is off. */}
-        {showSpeedometer ? <Speedometer speedKmh={speedKmh} /> : <View />}
-        <MapButton
-          shape="square"
-          size={mapButton.reportSize}
-          backgroundColor={colors.report}
-          accessibilityLabel="Report"
-          onPress={() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)} // Reports: Milestone 6.
-        >
-          <Icon name={{ ios: 'plus', android: 'add' }} size={30} color={colors.onReport} weight="heavy" />
-        </MapButton>
-      </Animated.View>
+      {!hideBottomRow && (
+        <Animated.View pointerEvents="box-none" style={[styles.bottomRow, bottomRowStyle]}>
+          {/* Empty spacer keeps the report button on the right when the speedometer is off. */}
+          {showSpeedometer ? <Speedometer speedKmh={speedKmh} /> : <View />}
+          <MapButton
+            shape="square"
+            size={mapButton.reportSize}
+            backgroundColor={colors.report}
+            accessibilityLabel="Report"
+            onPress={() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)} // Reports: Milestone 6.
+          >
+            <Icon name={{ ios: 'plus', android: 'add' }} size={30} color={colors.onReport} weight="heavy" />
+          </MapButton>
+        </Animated.View>
+      )}
     </View>
   );
 }

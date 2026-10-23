@@ -176,6 +176,7 @@ export function HomeMap() {
         following={!granted || followActive}
         onRecenter={recenter}
         speedKmh={speedKmh}
+        hideBottomRow={destination != null}
       />
 
       {blocked && !destination && (

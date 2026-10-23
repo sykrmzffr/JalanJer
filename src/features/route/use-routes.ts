@@ -16,13 +16,33 @@ export type RoutesState = {
 
 type Answer = { key: string; routes: Route[]; error: string | null };
 
+// A fresh GPS fix can take long indoors; don't leave "Finding routes…" spinning forever.
+const GPS_TIMEOUT_MS = 8000;
+
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T | null> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => resolve(null), ms);
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (error: unknown) => {
+        clearTimeout(timer);
+        reject(error);
+      },
+    );
+  });
+}
+
 /** Where the drive starts: a fresh-ish GPS fix with the direction you're facing. */
 async function currentStart(): Promise<{ from: LngLatTuple; heading: number | null } | null> {
   const permission = await Location.getForegroundPermissionsAsync();
   if (!permission.granted) return null;
   const position =
     (await Location.getLastKnownPositionAsync({ maxAge: 30_000 })) ??
-    (await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High }));
+    (await withTimeout(Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High }), GPS_TIMEOUT_MS));
+  if (!position) throw new RouteError("Can't find where you are yet. Try again in a moment.", 'no-route');
   // Heading from GPS is only meaningful while moving; otherwise let Valhalla choose.
   const moving = (position.coords.speed ?? 0) > 2;
   return {

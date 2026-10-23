@@ -1,6 +1,6 @@
 import { GeoJSONSource, Layer, Marker } from '@maplibre/maplibre-react-native';
 import { useMemo } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 import { radius, spacing, typography, useColors } from '@/theme';
 
@@ -93,11 +93,18 @@ export function RouteLines({ routes, selectedId, onSelect }: RouteLinesProps) {
       {routes.map((route, i) => {
         const selected = route.id === selectedId;
         return (
-          <Marker key={route.id} id={`bubble-${route.id}`} lngLat={bubbles[i]} anchor="bottom">
-            <Pressable
+          <Marker
+            key={route.id}
+            id={`bubble-${route.id}`}
+            lngLat={bubbles[i]}
+            anchor="bottom"
+            // MapLibre's own marker tap (a button inside a marker view may not get touches on every platform).
+            onPress={() => onSelect(route.id)}
+          >
+            <View
+              accessible
               accessibilityRole="button"
               accessibilityLabel={`Route ${i + 1}, ${formatDuration(route.duration)}`}
-              onPress={() => onSelect(route.id)}
               style={[
                 styles.bubble,
                 {
@@ -114,7 +121,7 @@ export function RouteLines({ routes, selectedId, onSelect }: RouteLinesProps) {
                   <Text style={[typography.labelSmall, { color: selected ? colors.route : colors.onRoute }]}>Best</Text>
                 </View>
               ) : null}
-            </Pressable>
+            </View>
           </Marker>
         );
       })}
