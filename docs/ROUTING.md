@@ -54,10 +54,11 @@ the real server yet. The code follows Valhalla's API reference, and the parsing 
 unit-tested with made-up responses in the documented shape. Check these first if
 something looks wrong:
 
-1. **Where alternative routes are in the answer.** The API reference says you can ask for
-   `alternates` but doesn't show where they appear in the response. The app reads them from
-   a top-level `alternates` list, each with its own `trip`. That's from my memory of
-   Valhalla, not from the docs. If only one route ever shows up, this is the likely cause.
+1. **Where alternative routes are in the answer**: checked in Valhalla's source code
+   (`src/tyr/route_serializer_valhalla.cc`, 2026-10-23). The answer has the main route in
+   `trip` and the others in a top-level `alternates` list, each with its own `trip`. That's
+   exactly what the app reads. If only one route shows up, the server simply found no good
+   alternative ("There may be no alternates", says the API reference).
 2. **Instructions language**: Valhalla has no Malay (checked the supported list), so
    instructions come in British English. That only matters for Milestone 4 (voice).
 3. **Avoid**: Valhalla treats "avoid" as a strong preference, not a hard rule. If a toll

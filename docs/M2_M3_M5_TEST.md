@@ -36,7 +36,7 @@ run.** About 20 minutes.
       routes.
 - [ ] Up to **3 routes**: one thick blue line and thinner other lines, each with a time
       bubble. The fastest says **Best**.
-      ⚠️ If you only ever see **one** route, tell me (see `docs/ROUTING.md`, point 1).
+      If you only ever see **one** route, even on long trips, tell me.
 - [ ] Tap another line, its bubble, or its row in the panel: it becomes the thick blue one.
 - [ ] Rows show time, km, "via" main roads, arrival time, and **Toll** where there are tolls.
       Do the times look believable compared with Waze or Google Maps?
