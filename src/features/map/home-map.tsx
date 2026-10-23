@@ -10,11 +10,14 @@ import { Button } from '@/components/button';
 import { BottomSheet } from '@/components/sheet/bottom-sheet';
 import { HomeSheetHeader } from '@/features/home-sheet/home-sheet-header';
 import { RecentsList } from '@/features/home-sheet/recents-list';
+import { RouteLines } from '@/features/route/components/route-lines';
+import { RoutePreviewPanel } from '@/features/route/components/route-preview-panel';
+import { useRoutes } from '@/features/route/use-routes';
 import { useDestinationStore } from '@/stores/destination-store';
 import { type Place, usePlacesStore } from '@/stores/places-store';
 import { mapButton, radius, spacing, typography, useColors } from '@/theme';
 
-import { DestinationCard } from './components/destination-card';
+import { DESTINATION_CARD_HEIGHT, DestinationCard } from './components/destination-card';
 import { DestinationPin } from './components/destination-pin';
 import { MapControls } from './components/map-controls';
 import { DEFAULT_ZOOM, MAP_STYLE_URL, SHAH_ALAM } from './constants';
@@ -61,10 +64,43 @@ export function HomeMap() {
   const setDestination = useDestinationStore((s) => s.setDestination);
   const addRecent = usePlacesStore((s) => s.addRecent);
 
+  const routesState = useRoutes(destination, pickedAt);
+  const { routes } = routesState;
+  // Selection belongs to one set of routes; a new set selects its first (main) route.
+  const [selection, setSelection] = useState<{ routes: typeof routes; id: string } | null>(null);
+  const selectedId = selection?.routes === routes ? selection.id : (routes[0]?.id ?? null);
+  const selectRoute = (id: string) => setSelection({ routes, id });
+
+  // Route preview panel height, so map buttons and the camera keep clear of it.
+  const [panelHeight, setPanelHeight] = useState(0);
+  const cardTop = insets.top + mapButton.size + spacing.xxxl;
+
+  // While previewing routes the home sheet is hidden; the map controls ride the route panel instead.
+  useEffect(() => {
+    sheetHeight.set(withSpring(destination ? Math.max(panelHeight, collapsed) : collapsed, SHEET_SPRING));
+  }, [destination, panelHeight, collapsed, sheetHeight]);
+
+  // Routes arrived: zoom out to show all of them between the header card and the panel.
+  useEffect(() => {
+    if (routes.length === 0 || panelHeight === 0) return;
+    const west = Math.min(...routes.map((r) => r.bounds.minLon));
+    const south = Math.min(...routes.map((r) => r.bounds.minLat));
+    const east = Math.max(...routes.map((r) => r.bounds.maxLon));
+    const north = Math.max(...routes.map((r) => r.bounds.maxLat));
+    cameraRef.current?.fitBounds([west, south, east, north], {
+      padding: {
+        top: cardTop + DESTINATION_CARD_HEIGHT + spacing.xl,
+        bottom: panelHeight + spacing.xl,
+        left: spacing.xxl,
+        right: spacing.xxl,
+      },
+      duration: 700,
+    });
+  }, [routes, panelHeight, cardTop]);
+
   // A place was picked (in search or from the sheet): stop following and fly to it.
   useEffect(() => {
     if (!destination) return;
-    sheetHeight.set(withSpring(collapsed, SHEET_SPRING));
     // Wait a frame so the camera has left follow mode before it moves.
     const frame = requestAnimationFrame(() =>
       cameraRef.current?.flyTo({
@@ -74,7 +110,7 @@ export function HomeMap() {
       }),
     );
     return () => cancelAnimationFrame(frame);
-  }, [destination, pickedAt, collapsed, sheetHeight]);
+  }, [destination, pickedAt]);
 
   const openSearch = () => router.push('/search');
   const goTo = (place: Place) => {
@@ -88,6 +124,7 @@ export function HomeMap() {
   const clearDestination = () => {
     setDestination(null);
     setFollowing(true);
+    setPanelHeight(0);
   };
   // Showing a picked place pauses "follow me" until you tap recenter.
   const [recenteredAt, setRecenteredAt] = useState(0);
@@ -125,6 +162,7 @@ export function HomeMap() {
           }
         />
         {granted && <NativeUserLocation mode="heading" />}
+        <RouteLines routes={routes} selectedId={selectedId} onSelect={selectRoute} />
         {destination && (
           <Marker id="destination" lngLat={destination.coordinate} anchor="bottom">
             <DestinationPin />
@@ -163,18 +201,27 @@ export function HomeMap() {
         <DestinationCard
           place={destination}
           // Below the OpenStreetMap attribution, which must stay visible.
-          top={insets.top + mapButton.size + spacing.xxxl}
+          top={cardTop}
           onClose={clearDestination}
         />
       )}
 
-      <BottomSheet
-        height={sheetHeight}
-        detents={detents}
-        header={<HomeSheetHeader onSearchPress={openSearch} onPlacePress={onChipPress} />}
-      >
-        <RecentsList onPlacePress={goTo} bottomInset={insets.bottom + spacing.lg} />
-      </BottomSheet>
+      {destination ? (
+        <RoutePreviewPanel
+          state={routesState}
+          selectedId={selectedId}
+          onSelect={selectRoute}
+          onLayout={(event) => setPanelHeight(Math.round(event.nativeEvent.layout.height))}
+        />
+      ) : (
+        <BottomSheet
+          height={sheetHeight}
+          detents={detents}
+          header={<HomeSheetHeader onSearchPress={openSearch} onPlacePress={onChipPress} />}
+        >
+          <RecentsList onPlacePress={goTo} bottomInset={insets.bottom + spacing.lg} />
+        </BottomSheet>
+      )}
     </View>
   );
 }

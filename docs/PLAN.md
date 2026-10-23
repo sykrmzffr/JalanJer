@@ -91,7 +91,7 @@ Later: Alerts and reports, Audio player, Notifications, Planned drives.
 | Toll prices | Our own table: LLM-published rates + OSM toll plazas, matched against the route | No free API covers Malaysian toll prices |
 | Live traffic | MVP: none (time-of-day typical speeds). Later: our own opt-in, anonymous speed data from users | The honest gap vs Waze — Waze's traffic comes from millions of drivers |
 | Voice | On-device TTS (`expo-speech`) | Free, works offline, has Malay voices |
-| Server | **Oracle Cloud Always Free** ARM VM (4 cores / 24 GB RAM) running Valhalla + Photon | Enough for Malaysia's road graph; $0 (signup needs a card for verification; free capacity can be hard to get in some regions) |
+| Server | **Oracle Cloud Always Free** ARM VM running Valhalla + Photon. **Update 2026-10-23:** several reports say Oracle cut the free ARM VM from 4 cores / 24 GB to **2 cores / 12 GB** in 2026; check Oracle's page before signing up (details and sources in `docs/SEARCH.md`) | Enough for Malaysia's road graph; $0 (signup needs a card for verification; free capacity can be hard to get in some regions) |
 | Backend (accounts, saved places, reports) | **Supabase** free tier (Postgres + PostGIS + Realtime) | Free tier pauses after a week of no activity — fine during development |
 | Local storage | MMKV | Fastest key-value store on RN |
 | State | Zustand | Small, no re-render storms |

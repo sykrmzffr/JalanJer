@@ -20,6 +20,8 @@ env:
   EXPO_PUBLIC_SENTRY_DSN: ${{ vars.EXPO_PUBLIC_SENTRY_DSN }}
   # Our own search server, once it exists. Empty = public Photon server. See docs/SEARCH.md.
   EXPO_PUBLIC_PHOTON_URL: ${{ vars.EXPO_PUBLIC_PHOTON_URL }}
+  # Our own routing server, once it exists. Empty = public Valhalla server. See docs/ROUTING.md.
+  EXPO_PUBLIC_VALHALLA_URL: ${{ vars.EXPO_PUBLIC_VALHALLA_URL }}
 
 jobs:
   build:
