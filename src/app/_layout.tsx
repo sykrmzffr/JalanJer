@@ -19,7 +19,11 @@ function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <StatusBar style="auto" />
-      <Stack screenOptions={{ headerShown: false }} />
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="index" />
+        {/* Search slides up over the map, like Waze. */}
+        <Stack.Screen name="search" options={{ animation: 'slide_from_bottom' }} />
+      </Stack>
       {__DEV__ && <FpsOverlay />}
     </GestureHandlerRootView>
   );

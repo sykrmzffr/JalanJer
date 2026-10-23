@@ -1,6 +1,7 @@
-import { Camera, Map, NativeUserLocation } from '@maplibre/maplibre-react-native';
+import { Camera, type CameraRef, Map, Marker, NativeUserLocation } from '@maplibre/maplibre-react-native';
+import { useRouter } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Linking, StyleSheet, Text, useColorScheme, useWindowDimensions, View } from 'react-native';
 import { useSharedValue, withSpring } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -9,8 +10,12 @@ import { Button } from '@/components/button';
 import { BottomSheet } from '@/components/sheet/bottom-sheet';
 import { HomeSheetHeader } from '@/features/home-sheet/home-sheet-header';
 import { RecentsList } from '@/features/home-sheet/recents-list';
+import { useDestinationStore } from '@/stores/destination-store';
+import { type Place, usePlacesStore } from '@/stores/places-store';
 import { mapButton, radius, spacing, typography, useColors } from '@/theme';
 
+import { DestinationCard } from './components/destination-card';
+import { DestinationPin } from './components/destination-pin';
 import { MapControls } from './components/map-controls';
 import { DEFAULT_ZOOM, MAP_STYLE_URL, SHAH_ALAM } from './constants';
 import { useLocationPermission } from './use-location-permission';
@@ -20,6 +25,9 @@ import { useSpeedKmh } from './use-speed';
 const SPLASH_TIMEOUT_MS = 3000;
 // Handle + "Where to?" row + chips row (see HomeSheetHeader), without the safe-area inset.
 const SHEET_HEADER_HEIGHT = 153;
+const SHEET_SPRING = { stiffness: 420, damping: 42, mass: 0.7 } as const;
+// Street level, so the pin's surroundings are recognisable.
+const DESTINATION_ZOOM = 15.5;
 
 /**
  * Home screen: full-screen native map, floating controls and the "Where to?"
@@ -46,8 +54,47 @@ export function HomeMap() {
     return () => clearTimeout(timer);
   }, [hideSplash]);
 
-  const expandSheet = () => {
-    sheetHeight.set(withSpring(detents[detents.length - 1], { stiffness: 420, damping: 42, mass: 0.7 }));
+  const router = useRouter();
+  const cameraRef = useRef<CameraRef>(null);
+  const destination = useDestinationStore((s) => s.destination);
+  const pickedAt = useDestinationStore((s) => s.pickedAt);
+  const setDestination = useDestinationStore((s) => s.setDestination);
+  const addRecent = usePlacesStore((s) => s.addRecent);
+
+  // A place was picked (in search or from the sheet): stop following and fly to it.
+  useEffect(() => {
+    if (!destination) return;
+    sheetHeight.set(withSpring(collapsed, SHEET_SPRING));
+    // Wait a frame so the camera has left follow mode before it moves.
+    const frame = requestAnimationFrame(() =>
+      cameraRef.current?.flyTo({
+        center: destination.coordinate,
+        zoom: DESTINATION_ZOOM,
+        duration: 900,
+      }),
+    );
+    return () => cancelAnimationFrame(frame);
+  }, [destination, pickedAt, collapsed, sheetHeight]);
+
+  const openSearch = () => router.push('/search');
+  const goTo = (place: Place) => {
+    addRecent(place);
+    setDestination(place);
+  };
+  const onChipPress = (place: Place | null, kind: 'home' | 'work' | 'saved') => {
+    if (place) goTo(place);
+    else if (kind === 'home' || kind === 'work') router.push({ pathname: '/search', params: { mode: kind } });
+  };
+  const clearDestination = () => {
+    setDestination(null);
+    setFollowing(true);
+  };
+  // Showing a picked place pauses "follow me" until you tap recenter.
+  const [recenteredAt, setRecenteredAt] = useState(0);
+  const followActive = following && (!destination || recenteredAt > pickedAt);
+  const recenter = () => {
+    setFollowing(true);
+    setRecenteredAt(Date.now());
   };
 
   return (
@@ -63,32 +110,44 @@ export function HomeMap() {
         logo={false}
         // OpenStreetMap attribution must stay visible: put it under the sound button,
         // where the sheet never covers it. Measured from the safe area on iOS.
-        attributionPosition={{ top: mapButton.size + spacing.md, right: spacing.lg }}
+        attributionPosition={{
+          top: mapButton.size + spacing.md,
+          right: spacing.lg,
+        }}
       >
         <Camera
+          ref={cameraRef}
           initialViewState={{ center: SHAH_ALAM, zoom: DEFAULT_ZOOM }}
-          trackUserLocation={granted && following ? 'heading' : undefined}
+          trackUserLocation={granted && followActive ? 'heading' : undefined}
           onTrackUserLocationChange={(event) =>
             // MapLibre stops following when you pan the map yourself.
             setFollowing(event.nativeEvent.trackUserLocation != null)
           }
         />
         {granted && <NativeUserLocation mode="heading" />}
+        {destination && (
+          <Marker id="destination" lngLat={destination.coordinate} anchor="bottom">
+            <DestinationPin />
+          </Marker>
+        )}
       </Map>
 
       <MapControls
         sheetHeight={sheetHeight}
         collapsedSheetHeight={collapsed}
-        following={!granted || following}
-        onRecenter={() => setFollowing(true)}
+        following={!granted || followActive}
+        onRecenter={recenter}
         speedKmh={speedKmh}
       />
 
-      {blocked && (
+      {blocked && !destination && (
         <View
           style={[
             styles.notice,
-            { top: insets.top + mapButton.size + spacing.lg, backgroundColor: colors.surfaceContainerHigh },
+            {
+              top: insets.top + mapButton.size + spacing.lg,
+              backgroundColor: colors.surfaceContainerHigh,
+            },
           ]}
         >
           <Text style={[typography.bodyMedium, { color: colors.onSurface }]}>
@@ -100,12 +159,21 @@ export function HomeMap() {
         </View>
       )}
 
+      {destination && (
+        <DestinationCard
+          place={destination}
+          // Below the OpenStreetMap attribution, which must stay visible.
+          top={insets.top + mapButton.size + spacing.xxxl}
+          onClose={clearDestination}
+        />
+      )}
+
       <BottomSheet
         height={sheetHeight}
         detents={detents}
-        header={<HomeSheetHeader onSearchPress={expandSheet} onPlacePress={expandSheet} />}
+        header={<HomeSheetHeader onSearchPress={openSearch} onPlacePress={onChipPress} />}
       >
-        <RecentsList onPlacePress={expandSheet} bottomInset={insets.bottom + spacing.lg} />
+        <RecentsList onPlacePress={goTo} bottomInset={insets.bottom + spacing.lg} />
       </BottomSheet>
     </View>
   );

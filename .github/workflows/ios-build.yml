@@ -18,6 +18,8 @@ env:
   EXPO_NO_TELEMETRY: '1'
   # Baked into the Release build's JS. Empty = Sentry off. See docs/SENTRY.md.
   EXPO_PUBLIC_SENTRY_DSN: ${{ vars.EXPO_PUBLIC_SENTRY_DSN }}
+  # Our own search server, once it exists. Empty = public Photon server. See docs/SEARCH.md.
+  EXPO_PUBLIC_PHOTON_URL: ${{ vars.EXPO_PUBLIC_PHOTON_URL }}
 
 jobs:
   build:

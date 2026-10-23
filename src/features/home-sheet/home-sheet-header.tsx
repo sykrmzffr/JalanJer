@@ -5,7 +5,7 @@ import { type Place, usePlacesStore } from '@/stores/places-store';
 import { minTouchTarget, radius, spacing, typography, useColors } from '@/theme';
 
 type HomeSheetHeaderProps = {
-  /** Opens search. Until Milestone 2 (search) this expands the sheet. */
+  /** Opens the search screen. */
   onSearchPress: () => void;
   onPlacePress: (place: Place | null, kind: 'home' | 'work' | 'saved') => void;
 };
@@ -30,11 +30,7 @@ export function HomeSheetHeader({ onSearchPress, onPlacePress }: HomeSheetHeader
         <Icon name={{ ios: 'mic', android: 'mic' }} size={20} color={colors.onSurface} />
       </Pressable>
 
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.chips}
-      >
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
         <Chip
           label="Home"
           icon={{ ios: 'house.fill', android: 'home' }}
