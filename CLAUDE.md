@@ -55,3 +55,5 @@ npx expo export --platform ios   # bundle JS without a Mac (sanity check)
 
 Run typecheck and lint before declaring work done. iOS builds: push and let the `iOS build` workflow run, or
 start it from the Actions tab. Installing on the iPhone: `docs/IPHONE_INSTALL.md`.
+Android `.apk` builds run on a free Linux runner (`.github/workflows/android-build.yml`); install guide:
+`docs/ANDROID_INSTALL.md`.
