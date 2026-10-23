@@ -78,9 +78,13 @@ export function RoutePreviewPanel({ state, selectedId, onSelect, onLayout }: Rou
             </Pressable>
           );
         })}
+        {/* Reloading with routes already shown: small spinner here instead of hiding them. */}
+        {state.status === 'loading' && state.routes.length > 0 && (
+          <ActivityIndicator size="small" color={colors.primary} accessibilityLabel="Updating routes" />
+        )}
       </View>
 
-      {state.status === 'loading' && (
+      {state.status === 'loading' && state.routes.length === 0 && (
         <View style={styles.message}>
           <ActivityIndicator color={colors.primary} />
           <Text style={[typography.bodyMedium, { color: colors.onSurfaceVariant }]}>Finding routes…</Text>
@@ -123,6 +127,8 @@ export function RoutePreviewPanel({ state, selectedId, onSelect, onLayout }: Rou
               {
                 borderColor: selected ? colors.route : colors.outlineVariant,
                 backgroundColor: selected ? colors.surfaceContainerLow : colors.surface,
+                // Old routes stay visible but faded while new ones load.
+                opacity: state.status === 'loading' ? 0.5 : 1,
               },
             ]}
           >

@@ -88,7 +88,11 @@ export function useRoutes(destination: Place | null, pickedAt: number): RoutesSt
   const retry = () => setAttempt((n) => n + 1);
 
   if (!destination) return { routes: [], status: 'idle', error: null, retry };
-  if (answer?.key !== key) return { routes: [], status: 'loading', error: null, retry };
+  if (answer?.key !== key) {
+    // Same trip, new options (e.g. Avoid toggled): keep showing the old routes while the new ones load.
+    const sameTrip = answer != null && answer.key.startsWith(`${destination.id}|${pickedAt}|`);
+    return { routes: sameTrip ? answer.routes : [], status: 'loading', error: null, retry };
+  }
   if (answer.error) return { routes: [], status: 'error', error: answer.error, retry };
   return { routes: answer.routes, status: 'done', error: null, retry };
 }
