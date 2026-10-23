@@ -101,6 +101,17 @@ describe('buildRouteRequest', () => {
     assert.deepEqual(body.costing_options.auto, { use_tolls: 0, use_highways: 0.5, use_ferry: 0 });
   });
 
+  it('uses motorcycle costing with the same Avoid options for motorcycles', () => {
+    const body = buildRouteRequest({
+      from: [1, 2],
+      to: [3, 4],
+      avoid: { tolls: true, highways: false, ferries: false },
+      vehicle: 'motorcycle',
+    });
+    assert.equal(body.costing, 'motorcycle');
+    assert.deepEqual(body.costing_options, { motorcycle: { use_tolls: 0, use_highways: 0.5, use_ferry: 0.5 } });
+  });
+
   it('adds the heading only when it is known', () => {
     const withHeading = buildRouteRequest({ from: [1, 2], to: [3, 4], heading: 91.6, avoid: NO_AVOID });
     assert.equal((withHeading.locations[0] as { heading?: number }).heading, 92);

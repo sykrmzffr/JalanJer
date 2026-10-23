@@ -1,4 +1,5 @@
 import * as Haptics from 'expo-haptics';
+import { useRouter } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 import Animated, {
   Extrapolation,
@@ -30,17 +31,13 @@ type MapControlsProps = {
 const BOTTOM_ROW_FADE_DISTANCE = 120;
 
 /** Floating buttons over the map, laid out like Waze's home screen. */
-export function MapControls({
-  sheetHeight,
-  collapsedSheetHeight,
-  following,
-  onRecenter,
-  speedKmh,
-}: MapControlsProps) {
+export function MapControls({ sheetHeight, collapsedSheetHeight, following, onRecenter, speedKmh }: MapControlsProps) {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const soundMuted = useSettingsStore((s) => s.soundMuted);
   const toggleSound = useSettingsStore((s) => s.toggleSound);
+  const showSpeedometer = useSettingsStore((s) => s.showSpeedometer);
+  const router = useRouter();
 
   // Runs on the UI thread: follows the sheet every frame while it is dragged.
   const bottomRowStyle = useAnimatedStyle(() => {
@@ -63,9 +60,17 @@ export function MapControls({
         <MapButton
           shape="square"
           accessibilityLabel="Menu"
-          onPress={() => Haptics.selectionAsync()} // Settings arrive in Milestone 5.
+          onPress={() => {
+            Haptics.selectionAsync();
+            router.push('/settings');
+          }}
         >
-          <Icon name={{ ios: 'line.3.horizontal', android: 'menu' }} size={24} color={colors.onSurface} weight="semibold" />
+          <Icon
+            name={{ ios: 'line.3.horizontal', android: 'menu' }}
+            size={24}
+            color={colors.onSurface}
+            weight="semibold"
+          />
         </MapButton>
         {!following && (
           <Animated.View entering={ZoomIn.springify()} exiting={ZoomOut.duration(150)}>
@@ -99,7 +104,8 @@ export function MapControls({
 
       {/* Bottom row: speedometer and report button, riding on top of the sheet. */}
       <Animated.View pointerEvents="box-none" style={[styles.bottomRow, bottomRowStyle]}>
-        <Speedometer speedKmh={speedKmh} />
+        {/* Empty spacer keeps the report button on the right when the speedometer is off. */}
+        {showSpeedometer ? <Speedometer speedKmh={speedKmh} /> : <View />}
         <MapButton
           shape="square"
           size={mapButton.reportSize}

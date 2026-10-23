@@ -38,11 +38,12 @@ async function currentStart(): Promise<{ from: LngLatTuple; heading: number | nu
  */
 export function useRoutes(destination: Place | null, pickedAt: number): RoutesState {
   const avoid = useSettingsStore((s) => s.avoid);
+  const vehicle = useSettingsStore((s) => s.vehicle);
   const [answer, setAnswer] = useState<Answer | null>(null);
   const [attempt, setAttempt] = useState(0);
 
   const key = destination
-    ? `${destination.id}|${pickedAt}|${avoid.tolls}${avoid.highways}${avoid.ferries}|${attempt}`
+    ? `${destination.id}|${pickedAt}|${avoid.tolls}${avoid.highways}${avoid.ferries}|${vehicle}|${attempt}`
     : '';
 
   useEffect(() => {
@@ -53,7 +54,7 @@ export function useRoutes(destination: Place | null, pickedAt: number): RoutesSt
       if (controller.signal.aborted) return;
       if (!start) throw new RouteError('Turn on location to get routes from where you are.', 'no-route');
       const routes = await fetchRoutes(
-        { from: start.from, to: destination.coordinate, heading: start.heading, avoid },
+        { from: start.from, to: destination.coordinate, heading: start.heading, avoid, vehicle },
         controller.signal,
       );
       if (!controller.signal.aborted) setAnswer({ key, routes, error: null });
@@ -62,7 +63,7 @@ export function useRoutes(destination: Place | null, pickedAt: number): RoutesSt
       setAnswer({ key, routes: [], error: e instanceof RouteError ? e.message : "Couldn't get routes. Try again." });
     });
     return () => controller.abort();
-  }, [key, destination, avoid]);
+  }, [key, destination, avoid, vehicle]);
 
   const retry = () => setAttempt((n) => n + 1);
 

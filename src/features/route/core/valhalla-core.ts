@@ -9,12 +9,16 @@ export type AvoidOptions = { tolls: boolean; highways: boolean; ferries: boolean
 
 export const NO_AVOID: AvoidOptions = { tolls: false, highways: false, ferries: false };
 
+export type Vehicle = 'car' | 'motorcycle';
+
 export type RouteRequest = {
   from: LngLatTuple;
   to: LngLatTuple;
   /** Direction of travel at the start (degrees from north), so the route doesn't begin with a U-turn. */
   heading?: number | null;
   avoid: AvoidOptions;
+  /** Defaults to car. Motorcycle uses Valhalla's `motorcycle` costing (marked BETA by Valhalla). */
+  vehicle?: Vehicle;
   /** How many extra routes to ask for. Valhalla may return fewer. */
   alternates?: number;
 };
@@ -59,11 +63,13 @@ export function buildRouteRequest(request: RouteRequest) {
     start.heading = Math.round(request.heading);
     start.heading_tolerance = 45;
   }
+  // Valhalla: "All of the options described above for autos also apply to motorcycle costing."
+  const costing = request.vehicle === 'motorcycle' ? 'motorcycle' : 'auto';
   return {
     locations: [start, { lat: request.to[1], lon: request.to[0] }],
-    costing: 'auto',
+    costing,
     costing_options: {
-      auto: {
+      [costing]: {
         use_tolls: request.avoid.tolls ? 0 : 0.5,
         use_highways: request.avoid.highways ? 0 : 0.5,
         use_ferry: request.avoid.ferries ? 0 : 0.5,
