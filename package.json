@@ -53,6 +53,7 @@
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json",
     "doctor": "expo-doctor",
     "tokens": "node --no-warnings --experimental-strip-types scripts/build-theme-css.mjs",
+    "map-style": "node scripts/build-map-style.mjs",
     "tokens:check": "node --no-warnings --experimental-strip-types scripts/build-theme-css.mjs --check",
     "test": "node --no-warnings --experimental-strip-types --test \"src/**/*.test.ts\""
   },

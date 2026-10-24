@@ -6,15 +6,15 @@ import {
 } from '@maplibre/maplibre-react-native';
 import { useMemo } from 'react';
 
-import { maneuverArrow } from '../core/nav-core';
+import { arrowScale, maneuverArrow, navZoom } from '../core/nav-core';
 import { useNavView } from '../navigation-session';
 
 // Only show the arrow once the turn is this close (m), so it doesn't sit far up the road.
 const SHOW_WITHIN_M = 600;
-// Arrow sizes in metres on the ground, so the head (a map shape) and the shaft (a line)
-// grow and shrink together with the zoom.
-const SHAFT_M = 4;
-const OUTLINE_M = 1.2;
+// Arrow sizes in metres on the ground at zoom 16.5 (scaled for other zooms), so the head
+// (a map shape) and the shaft (a line) grow and shrink together with the zoom.
+const SHAFT_M = 7;
+const OUTLINE_M = 1.5;
 // White arrow with a dark edge, like Waze. Same in light and dark mode.
 const ARROW = { fill: '#FFFFFF', edge: '#1C1D21' } as const;
 
@@ -37,8 +37,14 @@ export function NavManeuverArrow() {
       : null;
   });
 
-  // Geometry only changes when the next maneuver does, not on every GPS fix.
-  const arrow = useMemo(() => (prepared && next != null ? maneuverArrow(prepared, next) : null), [prepared, next]);
+  // Sized for the camera zoom, in half-zoom steps so speed changes rarely redraw it.
+  const scale = useNavView((s) => arrowScale(Math.round(navZoom(s.view?.speedKmh ?? 0) * 2) / 2));
+
+  // Geometry only changes with the next maneuver (or the zoom step), not on every GPS fix.
+  const arrow = useMemo(
+    () => (prepared && next != null ? maneuverArrow(prepared, next, { scale }) : null),
+    [prepared, next, scale],
+  );
   const data = useMemo<GeoJSON.FeatureCollection | null>(
     () =>
       arrow && {
@@ -71,7 +77,7 @@ export function NavManeuverArrow() {
         afterId="nav-route-line"
         filter={isShaft}
         layout={layout}
-        paint={{ 'line-color': ARROW.edge, 'line-width': metersWidth(SHAFT_M + 2 * OUTLINE_M, lat) }}
+        paint={{ 'line-color': ARROW.edge, 'line-width': metersWidth((SHAFT_M + 2 * OUTLINE_M) * scale, lat) }}
       />
       <Layer
         type="line"
@@ -80,7 +86,7 @@ export function NavManeuverArrow() {
         afterId="nav-arrow-shaft-edge"
         filter={isHead}
         layout={{ 'line-join': 'round' }}
-        paint={{ 'line-color': ARROW.edge, 'line-width': metersWidth(2 * OUTLINE_M, lat) }}
+        paint={{ 'line-color': ARROW.edge, 'line-width': metersWidth(2 * OUTLINE_M * scale, lat) }}
       />
       <Layer
         type="line"
@@ -89,7 +95,7 @@ export function NavManeuverArrow() {
         afterId="nav-arrow-head-edge"
         filter={isShaft}
         layout={layout}
-        paint={{ 'line-color': ARROW.fill, 'line-width': metersWidth(SHAFT_M, lat) }}
+        paint={{ 'line-color': ARROW.fill, 'line-width': metersWidth(SHAFT_M * scale, lat) }}
       />
       <Layer
         type="fill"

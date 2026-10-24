@@ -55,6 +55,7 @@ npx expo lint                # lint
 npm test                     # unit tests (Node's built-in runner; src/**/*.test.ts, tsconfig.test.json)
 npx expo-doctor              # Expo config/dependency checks (needs reactnative.directory)
 npm run tokens               # regenerate src/styles/theme.css after editing src/theme/colors.ts
+npm run map-style            # rebuild the bundled flat map style (docs/MAP_STYLE.md)
 npx expo install <pkg>       # add a dependency (picks SDK-compatible versions)
 npx beui-native add <slug>   # add a beUI Native component (needs beui.dev)
 npx expo export --platform ios   # bundle JS without a Mac (sanity check)

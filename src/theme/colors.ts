@@ -51,6 +51,8 @@ export type ColorRoles = {
   onRoute: string;
   /** Alternative (not selected) route lines. */
   routeAlternative: string;
+  /** Part of the route already driven (greyed purple). */
+  routeTraveled: string;
   /** Speedometer bubble background. Sampled. */
   speedometer: string;
   onSpeedometer: string;
@@ -102,6 +104,7 @@ export const lightColors: ColorRoles = {
   route: '#4F03AD', // sampled
   onRoute: '#FFFFFF',
   routeAlternative: '#B79AE6',
+  routeTraveled: '#A9A2BF',
   speedometer: '#45484D', // sampled
   onSpeedometer: '#FFFFFF',
   speeding: '#E53935',
@@ -149,6 +152,7 @@ export const darkColors: ColorRoles = {
   route: '#8E5CF0',
   onRoute: '#FFFFFF',
   routeAlternative: '#5B4A80',
+  routeTraveled: '#4A4558',
   speedometer: '#2B2D31',
   onSpeedometer: '#FFFFFF',
   speeding: '#FF5A52',

@@ -1,10 +1,13 @@
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import Animated, { FadeIn, FadeOut, SlideInDown, SlideInUp, ZoomIn, ZoomOut } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { ConfirmSheet } from '@/components/confirm-sheet';
 import { Icon } from '@/components/icon/icon';
+import { motion } from '@/styles/motion';
 import { Speedometer } from '@/features/map/components/speedometer';
 import { formatDistance } from '@/features/search/core/search-core';
 import { formatArrival, formatDuration } from '@/features/route/core/valhalla-core';
@@ -18,6 +21,8 @@ import { stillTherePrompt } from '@/features/reports/core/reports-core';
 import { useReportsStore } from '@/features/reports/reports-store';
 
 import type { NavigationView } from '../use-navigation';
+import { namedStreet } from '../core/nav-core';
+import { useNavUi } from '../navigation-session';
 import { NavBanner } from './nav-banner';
 import { TurnList } from './turn-list';
 
@@ -31,6 +36,10 @@ type NavigationOverlayProps = {
 
 // A "Still there?" prompt hides itself after this long.
 const PROMPT_MS = 12_000;
+
+// Banner and trip panel glide in (UI thread) when navigation starts.
+const slideSpring = <T extends typeof SlideInUp | typeof SlideInDown>(animation: T) =>
+  animation.springify().stiffness(motion.layout.stiffness).damping(motion.layout.damping).mass(motion.layout.mass);
 
 /** Everything drawn over the map while navigating: banner, car arrow, street pill, trip panel. */
 export function NavigationOverlay({ nav, onEnd }: NavigationOverlayProps) {
@@ -69,31 +78,70 @@ export function NavigationOverlay({ nav, onEnd }: NavigationOverlayProps) {
 
   const { maneuvers } = nav.prepared.route;
   const current = maneuvers[nav.state.step];
-  const street = current?.streetNames[0] ?? current?.beginStreetNames[0] ?? '';
+  const street = current ? (namedStreet(current) ?? '') : '';
   const arrival = formatArrival(new Date(), nav.progress.remainingDuration);
 
-  const confirmEnd = () =>
-    nav.state.arrived
-      ? onEnd()
-      : Alert.alert('End navigation?', undefined, [
-          { text: 'Keep going', style: 'cancel' },
-          { text: 'End', style: 'destructive', onPress: onEnd },
-        ]);
+  const follow = useNavUi((s) => s.follow);
+  const askingToEnd = useNavUi((s) => s.confirmEnd);
+  const confirmEnd = () => (nav.state.arrived ? onEnd() : useNavUi.setState({ confirmEnd: true }));
+  // Android Back after arriving: nothing to confirm, just finish.
+  const arrived = nav.state.arrived;
+  useEffect(() => {
+    if (askingToEnd && arrived) onEnd();
+  }, [askingToEnd, arrived, onEnd]);
+  const recenter = () => {
+    Haptics.selectionAsync();
+    useNavUi.setState({ follow: true });
+  };
 
   return (
-    <View pointerEvents="box-none" style={StyleSheet.absoluteFill}>
-      <NavBanner nav={nav} onPress={() => setListOpen(true)} />
+    <Animated.View entering={FadeIn.duration(200)} pointerEvents="box-none" style={StyleSheet.absoluteFill}>
+      <Animated.View entering={slideSpring(SlideInUp)} style={styles.top}>
+        <NavBanner nav={nav} onPress={() => setListOpen(true)} />
+      </Animated.View>
 
-      {/* Car arrow: fixed on screen; the map moves and turns under it. */}
-      <View pointerEvents="none" style={[styles.puckWrap, { top: `${PUCK_SCREEN_FRACTION * 100}%` }]}>
-        <View style={[styles.puckHalo, { backgroundColor: colors.puck }]} />
-        <Icon name={{ ios: 'location.north.fill', android: 'navigation' }} size={40} color={colors.puck} />
-      </View>
+      {/* Car arrow: fixed on screen; the map moves and turns under it. While you look
+          around the map, it's drawn on the map instead (NavFreePuck). */}
+      {follow ? (
+        <Animated.View
+          entering={ZoomIn.duration(200)}
+          exiting={ZoomOut.duration(150)}
+          pointerEvents="none"
+          style={[styles.puckWrap, { top: `${PUCK_SCREEN_FRACTION * 100}%` }]}
+        >
+          <View style={[styles.puckHalo, { backgroundColor: colors.puck }]} />
+          <Icon name={{ ios: 'location.north.fill', android: 'navigation' }} size={40} color={colors.puck} />
+        </Animated.View>
+      ) : null}
 
-      <View pointerEvents="box-none" style={[styles.bottom, { paddingBottom: insets.bottom + spacing.md }]}>
+      <Animated.View
+        entering={slideSpring(SlideInDown)}
+        pointerEvents="box-none"
+        style={[styles.bottom, { paddingBottom: insets.bottom + spacing.md }]}
+      >
         <View pointerEvents="box-none" style={styles.row}>
           {showSpeedometer ? <Speedometer speedKmh={nav.speedKmh} /> : <View />}
-          {street ? (
+          {!follow ? (
+            <Animated.View entering={FadeIn.duration(150)} exiting={FadeOut.duration(120)}>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Recenter on your car"
+                onPress={recenter}
+                style={({ pressed }) => [
+                  styles.pill,
+                  styles.recenter,
+                  {
+                    backgroundColor: colors.primary,
+                    shadowColor: colors.shadow,
+                    transform: [{ scale: pressed ? 0.96 : 1 }],
+                  },
+                ]}
+              >
+                <Icon name={{ ios: 'location.north.fill', android: 'navigation' }} size={20} color={colors.onPrimary} />
+                <Text style={[typography.titleMedium, { color: colors.onPrimary }]}>Recenter</Text>
+              </Pressable>
+            </Animated.View>
+          ) : street ? (
             <View style={[styles.pill, { backgroundColor: colors.surface, shadowColor: colors.shadow }]}>
               <Text numberOfLines={2} style={[typography.titleMedium, styles.pillText, { color: colors.onSurface }]}>
                 {street}
@@ -169,7 +217,7 @@ export function NavigationOverlay({ nav, onEnd }: NavigationOverlayProps) {
           {/* Keeps the ETA centred against the End button. */}
           <View style={styles.endSpacer} />
         </View>
-      </View>
+      </Animated.View>
 
       {prompt ? (
         <ReportCard
@@ -180,7 +228,19 @@ export function NavigationOverlay({ nav, onEnd }: NavigationOverlayProps) {
       ) : null}
 
       {listOpen ? <TurnList nav={nav} onClose={closeList} /> : null}
-    </View>
+
+      {askingToEnd && !nav.state.arrived ? (
+        <ConfirmSheet
+          title="End navigation?"
+          message={`${formatDuration(nav.progress.remainingDuration)} · ${formatDistance(nav.progress.remainingDistance)} to go`}
+          cancelLabel="Keep going"
+          confirmLabel="End"
+          destructive
+          onCancel={() => useNavUi.setState({ confirmEnd: false })}
+          onConfirm={onEnd}
+        />
+      ) : null}
+    </Animated.View>
   );
 }
 
@@ -200,7 +260,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   puckHalo: { position: 'absolute', width: PUCK * 2, height: PUCK * 2, borderRadius: PUCK, opacity: 0.15 },
+  top: { position: 'absolute', top: 0, left: 0, right: 0 },
   bottom: { position: 'absolute', left: 0, right: 0, bottom: 0, gap: spacing.md },
+  recenter: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   row: {
     flexDirection: 'row',
     alignItems: 'flex-end',

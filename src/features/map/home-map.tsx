@@ -2,18 +2,28 @@ import { Camera, type CameraRef, Map, Marker, NativeUserLocation } from '@maplib
 import { useRouter } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Alert, BackHandler, Linking, StyleSheet, Text, useColorScheme, useWindowDimensions, View } from 'react-native';
-import { useSharedValue, withSpring } from 'react-native-reanimated';
+import { BackHandler, Linking, StyleSheet, Text, useColorScheme, useWindowDimensions, View } from 'react-native';
+import Animated, {
+  FadeIn,
+  FadeInDown,
+  FadeOut,
+  FadeOutDown,
+  useSharedValue,
+  withSpring,
+} from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/button';
 import { BottomSheet } from '@/components/sheet/bottom-sheet';
 import { HomeSheetHeader } from '@/features/home-sheet/home-sheet-header';
 import { RecentsList } from '@/features/home-sheet/recents-list';
+import { navZoom } from '@/features/navigation/core/nav-core';
+import { NavFreePuck } from '@/features/navigation/components/nav-free-puck';
 import { NavManeuverArrow } from '@/features/navigation/components/nav-maneuver-arrow';
 import { NavRouteLine } from '@/features/navigation/components/nav-route-line';
 import { NavigationOverlay, PUCK_SCREEN_FRACTION } from '@/features/navigation/components/navigation-overlay';
-import { NavigationSession, useNavView } from '@/features/navigation/navigation-session';
+import { NavigationStarting } from '@/features/navigation/components/navigation-starting';
+import { NavigationSession, useNavUi, useNavView } from '@/features/navigation/navigation-session';
 import { ReportCard } from '@/features/reports/components/report-card';
 import { ReportPins } from '@/features/reports/components/report-pins';
 import type { Report } from '@/features/reports/core/reports-core';
@@ -30,7 +40,7 @@ import { mapButton, radius, spacing, typography, useColors } from '@/theme';
 import { DESTINATION_CARD_HEIGHT, DestinationCard } from './components/destination-card';
 import { DestinationPin } from './components/destination-pin';
 import { MapControls } from './components/map-controls';
-import { DEFAULT_ZOOM, MAP_STYLE_URL, SHAH_ALAM } from './constants';
+import { DEFAULT_ZOOM, MAP_STYLE, SHAH_ALAM } from './constants';
 import { useLocationPermission } from './use-location-permission';
 import { useSpeedKmh } from './use-speed';
 
@@ -41,13 +51,11 @@ const SHEET_HEADER_HEIGHT = 153;
 const SHEET_SPRING = { stiffness: 420, damping: 42, mass: 0.7 } as const;
 // Street level, so the pin's surroundings are recognisable.
 const DESTINATION_ZOOM = 15.5;
-// Camera tilt while navigating (degrees).
-const NAV_PITCH = 50;
+// Camera tilt while navigating (degrees). Flat (2D) like Waze's default view.
+const NAV_PITCH = 0;
 
-/** Closer at town speeds, further out on highways (MapLibre zoom levels). */
-function navZoom(speedKmh: number): number {
-  return Math.max(15, Math.min(17.5, 17.5 - speedKmh / 40));
-}
+// After you look around the map while navigating, it follows you again after this long untouched.
+const AUTO_RECENTER_MS = 15_000;
 
 /**
  * Home screen: full-screen native map, floating controls and the "Where to?"
@@ -166,6 +174,8 @@ export function HomeMap() {
   const practiceDrive = useSettingsStore((s) => s.practiceDrive);
   const navigating = navRoute != null;
   const navView = useNavView((s) => s.view);
+  const navFollow = useNavUi((s) => s.follow);
+  const navPractice = useNavigationStore((s) => s.practice);
 
   const goNow = () => {
     const route = routes.find((r) => r.id === selectedId);
@@ -176,24 +186,47 @@ export function HomeMap() {
     clearDestination();
   };
 
-  // While navigating, the camera glides (native, linear) to each new position once a
-  // second, turned to the road's direction and tilted. The car arrow is a fixed overlay
+  // While navigating (and following), the camera glides (native, linear) to each new
+  // position once a second, turned to the road's direction. The car arrow is a fixed overlay
   // at PUCK_SCREEN_FRACTION, so the top padding puts the camera's center right there.
   useEffect(() => {
-    if (!navigating) return;
-    return useNavView.subscribe(({ view }) => {
-      if (!view) return;
+    if (!navigating || !navFollow) return;
+    const follow = (view: NonNullable<typeof navView>, duration: number, easing: 'linear' | 'ease') =>
       cameraRef.current?.easeTo({
         center: view.state.snapped,
         bearing: view.bearing,
         pitch: NAV_PITCH,
         zoom: navZoom(view.speedKmh),
         padding: { top: Math.round((2 * PUCK_SCREEN_FRACTION - 1) * windowHeight), bottom: 0, left: 0, right: 0 },
-        duration: 1000,
-        easing: 'linear',
+        duration,
+        easing,
       });
+    // Starting, or back from looking around: glide over to the car first.
+    const current = useNavView.getState().view;
+    if (current) follow(current, 700, 'ease');
+    return useNavView.subscribe(({ view }) => {
+      if (view) follow(view, 1000, 'linear');
     });
-  }, [navigating, windowHeight]);
+  }, [navigating, navFollow, windowHeight]);
+
+  // Looking around while navigating: your own pan/zoom stops following; it comes back on
+  // Recenter, or by itself after AUTO_RECENTER_MS without touching the map.
+  const recenterTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const clearRecenterTimer = () => {
+    if (recenterTimer.current) clearTimeout(recenterTimer.current);
+    recenterTimer.current = null;
+  };
+  useEffect(() => () => clearRecenterTimer(), []);
+  const onRegionWillChange = (userInteraction: boolean) => {
+    if (!navigating || !userInteraction) return;
+    clearRecenterTimer();
+    if (useNavUi.getState().follow) useNavUi.setState({ follow: false });
+  };
+  const onRegionDidChange = (userInteraction: boolean) => {
+    if (!navigating || !userInteraction) return;
+    clearRecenterTimer();
+    recenterTimer.current = setTimeout(() => useNavUi.setState({ follow: true }), AUTO_RECENTER_MS);
+  };
 
   // Leaving navigation: level the map again and go back to following you.
   useEffect(() => {
@@ -206,18 +239,15 @@ export function HomeMap() {
     });
   }, [navigating]);
 
-  // Android back button while navigating asks before ending.
+  // Android back button while navigating asks before ending (or closes that question).
   useEffect(() => {
     if (!navigating) return;
     const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
-      Alert.alert('End navigation?', undefined, [
-        { text: 'Keep going', style: 'cancel' },
-        { text: 'End', style: 'destructive', onPress: endNavigation },
-      ]);
+      useNavUi.setState((s) => ({ confirmEnd: !s.confirmEnd }));
       return true;
     });
     return () => subscription.remove();
-  });
+  }, [navigating]);
 
   // Showing a picked place pauses "follow me" until you tap recenter.
   const [recenteredAt, setRecenteredAt] = useState(0);
@@ -231,7 +261,7 @@ export function HomeMap() {
     <View style={styles.root}>
       <Map
         style={StyleSheet.absoluteFill}
-        mapStyle={scheme === 'dark' ? MAP_STYLE_URL.dark : MAP_STYLE_URL.light}
+        mapStyle={scheme === 'dark' ? MAP_STYLE.dark : MAP_STYLE.light}
         onDidFinishLoadingMap={hideSplash}
         onDidFailLoadingMap={hideSplash}
         // Keeps the followed location centred in the part of the map above the sheet.
@@ -245,6 +275,8 @@ export function HomeMap() {
           top: mapButton.size + spacing.md,
           right: spacing.lg,
         }}
+        onRegionWillChange={(e) => onRegionWillChange(e.nativeEvent.userInteraction)}
+        onRegionDidChange={(e) => onRegionDidChange(e.nativeEvent.userInteraction)}
       >
         <Camera
           ref={cameraRef}
@@ -262,6 +294,7 @@ export function HomeMap() {
           <>
             <NavRouteLine route={navRoute} />
             <NavManeuverArrow />
+            <NavFreePuck />
           </>
         ) : (
           <RouteLines routes={routes} selectedId={selectedId} onSelect={selectRoute} />
@@ -277,11 +310,21 @@ export function HomeMap() {
       {navigating ? (
         <>
           <NavigationSession />
-          {navView ? <NavigationOverlay nav={navView} onEnd={endNavigation} /> : null}
+          {navView ? (
+            <NavigationOverlay nav={navView} onEnd={endNavigation} />
+          ) : (
+            <NavigationStarting practice={navPractice} onCancel={endNavigation} />
+          )}
         </>
       ) : (
         // Everything on the home screen and in route preview (hidden while navigating).
-        <>
+        // Fades out as navigation's own screen slides in, and back when it ends.
+        <Animated.View
+          entering={FadeIn.duration(220)}
+          exiting={FadeOut.duration(180)}
+          pointerEvents="box-none"
+          style={StyleSheet.absoluteFill}
+        >
           <MapControls
             sheetHeight={sheetHeight}
             collapsedSheetHeight={collapsed}
@@ -328,21 +371,28 @@ export function HomeMap() {
               onGo={goNow}
             />
           ) : (
-            <BottomSheet
-              height={sheetHeight}
-              detents={detents}
-              header={
-                <HomeSheetHeader
-                  onSearchPress={openSearch}
-                  onVoicePress={() => router.push({ pathname: '/search', params: { voice: '1' } })}
-                  onPlacePress={onChipPress}
-                />
-              }
+            <Animated.View
+              entering={FadeInDown.duration(220)}
+              exiting={FadeOutDown.duration(160)}
+              pointerEvents="box-none"
+              style={StyleSheet.absoluteFill}
             >
-              <RecentsList onPlacePress={goTo} bottomInset={insets.bottom + spacing.lg} />
-            </BottomSheet>
+              <BottomSheet
+                height={sheetHeight}
+                detents={detents}
+                header={
+                  <HomeSheetHeader
+                    onSearchPress={openSearch}
+                    onVoicePress={() => router.push({ pathname: '/search', params: { voice: '1' } })}
+                    onPlacePress={onChipPress}
+                  />
+                }
+              >
+                <RecentsList onPlacePress={goTo} bottomInset={insets.bottom + spacing.lg} />
+              </BottomSheet>
+            </Animated.View>
           )}
-        </>
+        </Animated.View>
       )}
       {selectedReport ? (
         <ReportCard

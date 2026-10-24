@@ -11,7 +11,7 @@ import type { Maneuver } from '@/features/route/core/valhalla-core';
 import { useNow } from '@/lib/use-now';
 import { minTouchTarget, radius, spacing, typography } from '@/theme';
 
-import { formatManeuverDistance } from '../core/nav-core';
+import { formatManeuverDistance, maneuverTitle, namedStreet } from '../core/nav-core';
 import { maneuverIcon } from '../maneuver-icon';
 import { reportsAhead } from '../route-reports';
 import type { NavigationView } from '../use-navigation';
@@ -30,7 +30,6 @@ const ROUNDABOUT_ENTER = 26;
 export function TurnList({ nav, onClose }: { nav: NavigationView; onClose: () => void }) {
   const insets = useSafeAreaInsets();
   const [tab, setTab] = useState<Tab>('turns');
-  const [bannerHeight, setBannerHeight] = useState(0);
 
   // Android Back closes the list (not navigation).
   useEffect(() => {
@@ -43,8 +42,8 @@ export function TurnList({ nav, onClose }: { nav: NavigationView; onClose: () =>
 
   return (
     <Animated.View entering={FadeIn.duration(150)} exiting={FadeOut.duration(120)} style={styles.root}>
-      <NavBanner nav={nav} onLayout={setBannerHeight} />
-      <View style={[styles.body, { marginTop: bannerHeight }]}>
+      <NavBanner nav={nav} />
+      <View style={styles.body}>
         <View style={styles.segmentWrap}>
           <View style={styles.segment} accessibilityRole="tablist">
             {(
@@ -97,7 +96,8 @@ function Turns({ nav }: { nav: NavigationView }) {
         index={rows.length}
         icon={<ManeuverGlyph maneuver={maneuvers[i]} />}
         distance={formatManeuverDistance(maneuverAt[i] - maneuverAt[i - 1])}
-        title={maneuvers[i].streetNames[0] || maneuvers[i].beginStreetNames[0] || maneuvers[i].instruction}
+        title={maneuverTitle(maneuvers[i])}
+        subtitle={namedStreet(maneuvers[i]) ? maneuvers[i].instruction : undefined}
       />,
     );
   }

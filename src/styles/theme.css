@@ -39,6 +39,7 @@
       --color-route: #4F03AD;
       --color-on-route: #FFFFFF;
       --color-route-alternative: #B79AE6;
+      --color-route-traveled: #A9A2BF;
       --color-speedometer: #45484D;
       --color-on-speedometer: #FFFFFF;
       --color-speeding: #E53935;
@@ -92,6 +93,7 @@
       --color-route: #8E5CF0;
       --color-on-route: #FFFFFF;
       --color-route-alternative: #5B4A80;
+      --color-route-traveled: #4A4558;
       --color-speedometer: #2B2D31;
       --color-on-speedometer: #FFFFFF;
       --color-speeding: #FF5A52;

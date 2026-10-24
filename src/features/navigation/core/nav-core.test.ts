@@ -8,6 +8,7 @@ import {
   formatManeuverDistance,
   initialState,
   maneuverArrow,
+  maneuverTitle,
   type NavState,
   placeOnRoute,
   prepareRoute,
@@ -232,5 +233,23 @@ describe('maneuverArrow', () => {
   it('draws nothing for the start or the destination', () => {
     assert.equal(maneuverArrow(prepared, 0), null);
     assert.equal(maneuverArrow(prepared, 2), null);
+  });
+});
+
+describe('maneuverTitle', () => {
+  const m = (streetNames: string[], beginStreetNames: string[] = []) => ({
+    streetNames,
+    beginStreetNames,
+    instruction: 'Take the ramp on the left toward 2.',
+  });
+
+  it('uses a real street name', () => {
+    assert.equal(maneuverTitle(m(['Jalan Ilmu 1/1'])), 'Jalan Ilmu 1/1');
+    assert.equal(maneuverTitle(m(['2', 'Federal Highway'])), 'Federal Highway');
+  });
+
+  it('falls back to the instruction instead of a bare route number', () => {
+    assert.equal(maneuverTitle(m(['2'])), 'Take the ramp on the left toward 2.');
+    assert.equal(maneuverTitle(m([])), 'Take the ramp on the left toward 2.');
   });
 });

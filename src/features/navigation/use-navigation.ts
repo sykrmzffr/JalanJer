@@ -40,6 +40,11 @@ export type NavigationView = {
   bearing: number;
   /** Speed in km/h from the latest fix. */
   speedKmh: number;
+  /**
+   * Metres along the route at the previous fix. The camera is still gliding from there,
+   * so the "already driven" grey stops here and never shows ahead of the car arrow.
+   */
+  trailAlong: number;
   rerouting: boolean;
   /** Practice drive (simulated GPS). */
   practice: boolean;
@@ -59,7 +64,12 @@ export function useNavigation(): NavigationView | null {
   const replaceRoute = useNavigationStore((s) => s.replaceRoute);
 
   const prepared = useMemo(() => (route ? prepareRoute(route) : null), [route]);
-  const [view, setView] = useState<{ version: number; state: NavState; speedKmh: number } | null>(null);
+  const [view, setView] = useState<{
+    version: number;
+    state: NavState;
+    speedKmh: number;
+    trailAlong: number;
+  } | null>(null);
   const [rerouting, setRerouting] = useState(false);
   const lastReroute = useRef(0);
   // Reports already warned about on this trip (kept across reroutes, so each is said once).
@@ -123,9 +133,10 @@ export function useNavigation(): NavigationView | null {
 
     const onFix = (fix: Fix) => {
       if (cancelled) return;
+      const trailAlong = state.distanceAlong;
       const result = update(prepared, state, fix);
       state = result.state;
-      setView({ version: routeVersion, state, speedKmh: Math.round((fix.speed ?? 0) * 3.6) });
+      setView({ version: routeVersion, state, speedKmh: Math.round((fix.speed ?? 0) * 3.6), trailAlong });
       handle(result.events, fix);
       warnAboutReports(fix);
     };
@@ -174,6 +185,7 @@ export function useNavigation(): NavigationView | null {
       progress: progress(prepared, view.state),
       bearing: segmentBearing(prepared, view.state.segment),
       speedKmh: view.speedKmh,
+      trailAlong: view.trailAlong,
       rerouting,
       practice,
     };

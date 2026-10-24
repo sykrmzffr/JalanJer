@@ -11,7 +11,12 @@
 1. ☰ → Settings → **Navigation** → turn on **Practice drive**.
 2. Search a place 3–10 km away → the route button now says **Practice drive** → tap it.
 3. Check:
-   - [ ] Map tilts and turns with the road; the blue arrow stays in the lower part of the screen.
+   - [ ] "Starting practice drive…" banner for a moment, then the map turns with the road (flat,
+         no tilt); the blue arrow stays in the lower part of the screen.
+   - [ ] The road behind you turns grey-purple.
+   - [ ] Drag the map: the arrow becomes a blue dot on the map and **Recenter** appears. Tap
+         it (or wait 15 s): back to following.
+   - [ ] Banner never shows just a number like "2"; then it shows the full instruction.
    - [ ] Movement looks **smooth**, not jumping once a second. (Most important: tell me.)
    - [ ] Black banner: arrow + distance counting down + street name. "and then" appears for quick double turns.
    - [ ] Voice says the first instruction, then "In … meters, turn …", then the turn again just before it.
@@ -19,7 +24,7 @@
    - [ ] Bottom panel: arrival time, minutes and km left, counting down. "Practice drive" label.
    - [ ] All banner arrows show (none blank). If one is blank, tell me which turn.
    - [ ] At the end: "You have arrived", ✕ becomes ✓; tap it to finish.
-   - [ ] ✕ during the drive asks "End navigation?"; Android Back does too.
+   - [ ] ✕ during the drive slides up an "End navigation?" sheet; Android Back opens/closes it.
    - [ ] White turn arrow on the road at the next turn (from 600 m away). Right size? Lined up?
    - [ ] Tap the black banner → turn list. **Next turns** lists the turns; roundabouts show a
          ring with the exit number. **CLOSE** and Android Back close it (navigation keeps going).

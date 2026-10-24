@@ -314,6 +314,23 @@ export function progress(p: PreparedRoute, state: NavState): Progress {
   };
 }
 
+// ── Names ──
+
+type Named = Pick<Route['maneuvers'][number], 'streetNames' | 'beginStreetNames' | 'instruction'>;
+
+/** The maneuver's street name, skipping bare route numbers like "2" (Federal Highway). Null if none. */
+export function namedStreet(m: Named): string | null {
+  return [...m.streetNames, ...m.beginStreetNames].find((name) => /\p{L}{2,}/u.test(name)) ?? null;
+}
+
+/**
+ * What to call a maneuver on screen: its street name, or (when the road only has a
+ * number) the full instruction, which is clearer, e.g. "Take the ramp on the left toward 2".
+ */
+export function maneuverTitle(m: Named): string {
+  return namedStreet(m) ?? m.instruction;
+}
+
 // ── Things on the route (reports) ──
 
 /** Something placed on the route: `along` is its distance from the route start (m). */
@@ -355,6 +372,18 @@ export function reportWarningDistance(speedMps: number | null): number {
   return (speedMps ?? DEFAULT_SPEED_MPS) > 22 ? 1000 : 500;
 }
 
+// ── Camera ──
+
+/** Navigation camera zoom: closer at town speeds, further out on highways (MapLibre zoom levels). */
+export function navZoom(speedKmh: number): number {
+  return Math.max(15, Math.min(17.5, 17.5 - speedKmh / 40));
+}
+
+/** Arrow size factor for a camera zoom: 1 at zoom 16.5, twice as big one zoom level further out. */
+export function arrowScale(zoom: number): number {
+  return 2 ** (16.5 - zoom);
+}
+
 // ── Turn arrow drawn on the road ──
 
 export type ManeuverArrow = {
@@ -376,18 +405,19 @@ function offset([lng, lat]: LngLatTuple, east: number, north: number): LngLatTup
 /**
  * Arrow following the road through maneuver `index`: from `before` metres before
  * it to `after` metres after (not past the next maneuver), ending in a triangle.
- * Null for maneuvers that aren't turns (start, arrive, continue).
+ * Null for maneuvers that aren't turns (start, arrive, continue). `scale` grows it
+ * when the camera is zoomed out (see `arrowScale`), so it looks the same size on screen.
  */
 export function maneuverArrow(
   p: PreparedRoute,
   index: number,
-  { before = 35, after = 25, headLength = 12, headWidth = 14 } = {},
+  { before = 45, after = 30, headLength = 16, headWidth = 22, scale = 1 } = {},
 ): ManeuverArrow | null {
   const maneuver = p.route.maneuvers[index];
   if (!maneuver || NO_ARROW.has(maneuver.type)) return null;
   const at = p.maneuverAt[index];
-  const start = Math.max(0, at - before);
-  const end = Math.min(p.total, at + after, (p.maneuverAt[index + 1] ?? p.total) - 2);
+  const start = Math.max(0, at - before * scale);
+  const end = Math.min(p.total, at + after * scale, (p.maneuverAt[index + 1] ?? p.total) - 2);
   if (end - start < 10) return null;
 
   const shaft: LngLatTuple[] = [pointAtDistance(p, start).point];
@@ -401,9 +431,11 @@ export function maneuverArrow(
   const dir = (bearing(pointAtDistance(p, end - 4).point, tip) * Math.PI) / 180;
   const ux = Math.sin(dir);
   const uy = Math.cos(dir);
-  const point = offset(tip, ux * headLength, uy * headLength);
-  const left = offset(tip, -uy * (headWidth / 2), ux * (headWidth / 2));
-  const right = offset(tip, uy * (headWidth / 2), -ux * (headWidth / 2));
+  const length = headLength * scale;
+  const half = (headWidth * scale) / 2;
+  const point = offset(tip, ux * length, uy * length);
+  const left = offset(tip, -uy * half, ux * half);
+  const right = offset(tip, uy * half, -ux * half);
   return { shaft, head: [left, point, right, left] };
 }
 

@@ -3,13 +3,17 @@
 ## How to use
 
 1. Search a place → route preview → pick a route → **Go now**.
-2. The map tilts and turns with the road; your car is the arrow in the lower part of the
-   screen. The black banner shows the next turn, the distance to it and the street name;
+2. The map turns with the road (flat, no tilt); your car is the arrow in the lower part of
+   the screen. While you wait for the first GPS position a "Finding your location…" banner
+   shows. The part of the route you've driven turns grey. The black banner shows the next turn, the distance to it and the street name;
    "and then" appears when another turn follows right after.
 3. Voice says each turn twice: an early warning ("In 800 meters, turn right onto …") and
    again just before it. The speaker button mutes it (same setting as on the map).
-4. Bottom panel: arrival time, minutes and km left. **✕** ends navigation (asks first).
-   On Android the Back button does the same.
+4. Bottom panel: arrival time, minutes and km left. **✕** ends navigation (asks first, in a
+   sheet from the bottom). On Android the Back button does the same.
+   **Look around**: drag or zoom the map and it stops following you; your position shows as
+   a blue dot and a **Recenter** button appears. It also recenters by itself after 15 s
+   without touching the map (my choice of time).
 5. Leave the route and after about 3 seconds it says "Rerouting" and finds a new route.
 6. At the end: "You have arrived", and the ✕ becomes a ✓ (Done).
 7. A white **turn arrow** is drawn on the road at the next turn once it's within 600 m.
@@ -56,7 +60,11 @@ The screen stays on while navigating.
   tell me which turn.
 
 - Turn arrow: `components/nav-maneuver-arrow.tsx`, shape from `maneuverArrow` in nav-core.
-  Sizes are in metres on the ground (4 m wide line, 14 m wide head), so it scales with zoom.
+  Sizes are in metres on the ground, scaled with the camera zoom (`arrowScale`) so it looks
+  about the same size on screen in town and on highways.
+- Banner title: the street name, but never a bare route number like "2" (Federal Highway's
+  number in OpenStreetMap). With only a number, the full instruction shows instead
+  (`maneuverTitle`). The turn list shows the instruction under each street.
 - Reports on the route: `placeOnRoute` in nav-core + `route-reports.ts`. A report counts
   when it's within 40 m of the route line. We don't store which direction a report was
   for, so one on the other side of a divided highway (or a road right beside the route)
