@@ -16,6 +16,7 @@ import {
   segmentBearing,
   simulatedFix,
   snapToRoute,
+  stepPracticeSpeed,
   spokenDistance,
   update,
 } from './nav-core.ts';
@@ -181,9 +182,18 @@ describe('formatting', () => {
 
 describe('practice drive', () => {
   it('moves along the route at the given speed', () => {
-    const fix = simulatedFix(prepared, 10_000, 20, 0); // 200 m after 10 s
+    const fix = simulatedFix(prepared, 200, 20, 0);
     const snap = snapToRoute(prepared, fix.coordinate);
     assert.ok(Math.abs(snap.along - 200) < 1, `along ${snap.along}`);
+    assert.equal(fix.speed, 20);
+  });
+
+  it('changes speed in 10 km/h steps between 10 and 150', () => {
+    assert.equal(stepPracticeSpeed(50, 1), 60);
+    assert.equal(stepPracticeSpeed(50, -1), 40);
+    assert.equal(stepPracticeSpeed(10, -1), 10);
+    assert.equal(stepPracticeSpeed(150, 1), 150);
+    assert.equal(stepPracticeSpeed(54, 1), 60);
   });
 });
 

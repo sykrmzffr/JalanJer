@@ -180,6 +180,17 @@ export function ChoiceRow({
   );
 }
 
+/** Label on the left, any control on the right (e.g. a − value + stepper). */
+export function StepperRow({ label, control }: { label: string; control: ReactNode }) {
+  const colors = useColors();
+  return (
+    <View style={styles.row}>
+      <Text style={[typography.bodyLarge, styles.rowText, { color: colors.onSurface }]}>{label}</Text>
+      {control}
+    </View>
+  );
+}
+
 /** Plain text row (e.g. version number). */
 export function InfoRow({ label, value }: { label: string; value: string }) {
   const colors = useColors();

@@ -24,6 +24,8 @@ import type { NavigationView } from '../use-navigation';
 import { namedStreet } from '../core/nav-core';
 import { useNavUi } from '../navigation-session';
 import { NavBanner } from './nav-banner';
+import { NavPuck } from './nav-puck';
+import { PracticeSpeed } from './practice-speed';
 import { TurnList } from './turn-list';
 
 /** Fraction of the screen (from the top) where the car arrow sits; the camera centers there. */
@@ -110,7 +112,7 @@ export function NavigationOverlay({ nav, onEnd }: NavigationOverlayProps) {
           style={[styles.puckWrap, { top: `${PUCK_SCREEN_FRACTION * 100}%` }]}
         >
           <View style={[styles.puckHalo, { backgroundColor: colors.puck }]} />
-          <Icon name={{ ios: 'location.north.fill', android: 'navigation' }} size={40} color={colors.puck} />
+          <NavPuck color={colors.puck} />
         </Animated.View>
       ) : null}
 
@@ -211,7 +213,10 @@ export function NavigationOverlay({ nav, onEnd }: NavigationOverlayProps) {
               </>
             )}
             {practice ? (
-              <Text style={[typography.labelMedium, { color: colors.warning }]}>Practice drive (simulated GPS)</Text>
+              <View style={styles.practice}>
+                <Text style={[typography.labelMedium, { color: colors.warning }]}>Practice drive</Text>
+                <PracticeSpeed compact />
+              </View>
             ) : null}
           </View>
           {/* Keeps the ETA centred against the End button. */}
@@ -263,6 +268,7 @@ const styles = StyleSheet.create({
   top: { position: 'absolute', top: 0, left: 0, right: 0 },
   bottom: { position: 'absolute', left: 0, right: 0, bottom: 0, gap: spacing.md },
   recenter: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  practice: { alignItems: 'center', gap: spacing.xs, marginTop: spacing.xs },
   row: {
     flexDirection: 'row',
     alignItems: 'flex-end',

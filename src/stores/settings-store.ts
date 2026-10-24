@@ -28,6 +28,9 @@ type SettingsState = {
   /** Navigation uses fake GPS that drives along the route (for trying it out at home). */
   practiceDrive: boolean;
   togglePracticeDrive: () => void;
+  /** Practice drive speed (km/h). Changeable while practice-driving too. */
+  practiceSpeedKmh: number;
+  setPracticeSpeed: (kmh: number) => void;
 };
 
 export const useSettingsStore = create<SettingsState>()(
@@ -47,12 +50,24 @@ export const useSettingsStore = create<SettingsState>()(
       toggleTollPass: (key) => set((state) => ({ tollPasses: { ...state.tollPasses, [key]: !state.tollPasses[key] } })),
       practiceDrive: false,
       togglePracticeDrive: () => set((state) => ({ practiceDrive: !state.practiceDrive })),
+      practiceSpeedKmh: 50,
+      setPracticeSpeed: (kmh) => set({ practiceSpeedKmh: kmh }),
     }),
     {
       name: 'settings',
       storage: createJSONStorage(() => zustandStorage),
-      partialize: ({ soundMuted, avoid, theme, vehicle, showSpeedometer, tollPasses, practiceDrive }) => ({
+      partialize: ({
+        soundMuted,
+        avoid,
+        theme,
+        vehicle,
+        showSpeedometer,
+        tollPasses,
         practiceDrive,
+        practiceSpeedKmh,
+      }) => ({
+        practiceDrive,
+        practiceSpeedKmh,
         soundMuted,
         avoid,
         theme,

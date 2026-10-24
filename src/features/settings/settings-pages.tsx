@@ -8,7 +8,9 @@ import { UPDATES_SUPPORTED, useUpdateStore } from '@/features/updates/update-sto
 import { usePlacesStore } from '@/stores/places-store';
 import { useSettingsStore, type ThemeSetting } from '@/stores/settings-store';
 
-import { ChoiceRow, InfoRow, NavRow, Section, SettingsScreen, SwitchRow } from './components';
+import { PracticeSpeed } from '@/features/navigation/components/practice-speed';
+
+import { ChoiceRow, InfoRow, NavRow, Section, SettingsScreen, StepperRow, SwitchRow } from './components';
 
 // Icon badge colours, chosen to resemble the Waze settings list (not sampled from the screenshot).
 const BADGE = {
@@ -222,9 +224,10 @@ function NavigationPage() {
       </Section>
       <Section
         title="Try it out"
-        footer="Practice drive moves you along the route with fake GPS at 50 km/h, with voice and turn banners, so you can try navigation without driving. The Go button says Practice drive while this is on."
+        footer="Practice drive moves you along the route with fake GPS at this speed, with voice and turn banners, so you can try navigation without driving. You can also change the speed during the drive (bottom panel). The Go button says Practice drive while this is on."
       >
         <SwitchRow label="Practice drive" detail="Simulated GPS" value={practiceDrive} onToggle={togglePracticeDrive} />
+        {practiceDrive ? <StepperRow label="Practice speed" control={<PracticeSpeed />} /> : null}
       </Section>
     </SettingsScreen>
   );

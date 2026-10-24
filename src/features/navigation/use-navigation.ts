@@ -26,8 +26,6 @@ import {
 } from './core/nav-core';
 import { reportsAhead } from './route-reports';
 
-// Practice drive speed: 50 km/h.
-const PRACTICE_SPEED_MPS = 13.9;
 const FIX_INTERVAL_MS = 1000;
 // Don't ask for a new route more often than this.
 const REROUTE_COOLDOWN_MS = 10_000;
@@ -143,12 +141,19 @@ export function useNavigation(): NavigationView | null {
 
     let stop: () => void;
     if (practice) {
-      const start = Date.now();
-      const timer = setInterval(
-        () => onFix(simulatedFix(prepared, Date.now() - start, PRACTICE_SPEED_MPS, start)),
-        FIX_INTERVAL_MS,
-      );
-      onFix(simulatedFix(prepared, 0, PRACTICE_SPEED_MPS, start));
+      // Distance adds up tick by tick, so changing the practice speed mid-drive just
+      // changes how fast it moves from here on (Settings or the +/- in the trip panel).
+      let distance = 0;
+      let last = Date.now();
+      const speedMps = () => useSettingsStore.getState().practiceSpeedKmh / 3.6;
+      const tick = () => {
+        const now = Date.now();
+        distance += (speedMps() * (now - last)) / 1000;
+        last = now;
+        onFix(simulatedFix(prepared, distance, speedMps(), now));
+      };
+      const timer = setInterval(tick, FIX_INTERVAL_MS);
+      onFix(simulatedFix(prepared, 0, speedMps(), last));
       stop = () => clearInterval(timer);
     } else {
       let subscription: Location.LocationSubscription | undefined;

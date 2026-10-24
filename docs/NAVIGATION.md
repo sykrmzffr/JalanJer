@@ -26,7 +26,9 @@
    the speaker button like the turns.
 
 **Practice drive** (Settings → Navigation → Practice drive): fake GPS that drives the route
-at 50 km/h, so you can try all of this at home. The Go button then says "Practice drive".
+at the speed you pick (10 to 150 km/h, starts at 50), so you can try all of this at home. The
+Go button then says "Practice drive". Change the speed with − / + in Settings or in the
+bottom panel during the drive.
 
 The screen stays on while navigating.
 

@@ -440,10 +440,22 @@ export function maneuverArrow(
 }
 
 /**
- * Practice drive: fake GPS fixes moving along the route at `speedMps`, one per
- * `intervalMs`. Lets you try navigation without driving.
+ * Practice drive: a fake GPS fix `distance` metres along the route, moving at
+ * `speedMps`. Lets you try navigation without driving.
  */
-export function simulatedFix(p: PreparedRoute, elapsedMs: number, speedMps: number, startTime: number): Fix {
-  const { point } = pointAtDistance(p, (elapsedMs / 1000) * speedMps);
-  return { coordinate: point, accuracy: 5, speed: speedMps, time: startTime + elapsedMs };
+export function simulatedFix(p: PreparedRoute, distance: number, speedMps: number, time: number): Fix {
+  const { point } = pointAtDistance(p, distance);
+  return { coordinate: point, accuracy: 5, speed: speedMps, time };
+}
+
+/** Practice drive speeds you can pick (km/h). */
+export const PRACTICE_SPEED_MIN_KMH = 10;
+export const PRACTICE_SPEED_MAX_KMH = 150;
+const PRACTICE_SPEED_STEP_KMH = 10;
+
+/** One step faster (+1) or slower (-1), staying between the min and max. */
+export function stepPracticeSpeed(kmh: number, direction: 1 | -1): number {
+  const next =
+    Math.round(kmh / PRACTICE_SPEED_STEP_KMH) * PRACTICE_SPEED_STEP_KMH + direction * PRACTICE_SPEED_STEP_KMH;
+  return Math.max(PRACTICE_SPEED_MIN_KMH, Math.min(PRACTICE_SPEED_MAX_KMH, next));
 }

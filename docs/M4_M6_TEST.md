@@ -11,6 +11,9 @@
 1. ☰ → Settings → **Navigation** → turn on **Practice drive**.
 2. Search a place 3–10 km away → the route button now says **Practice drive** → tap it.
 3. Check:
+   - [ ] − / + under "Practice drive" in the bottom panel changes the speed (10–150 km/h);
+         the car speeds up/slows down from there and the speedometer follows.
+   - [ ] The car arrow is solid blue with a white edge.
    - [ ] "Starting practice drive…" banner for a moment, then the map turns with the road (flat,
          no tilt); the blue arrow stays in the lower part of the screen.
    - [ ] The road behind you turns grey-purple.
