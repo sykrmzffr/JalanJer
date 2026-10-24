@@ -12,6 +12,7 @@ import Animated, {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon } from '@/components/icon/icon';
+import { useUpdateStore } from '@/features/updates/update-store';
 import { useSettingsStore } from '@/stores/settings-store';
 import { mapButton, spacing, useColors } from '@/theme';
 
@@ -45,6 +46,7 @@ export function MapControls({
   hideBottomRow = false,
 }: MapControlsProps) {
   const colors = useColors();
+  const updateReady = useUpdateStore((s) => s.status === 'available');
   const insets = useSafeAreaInsets();
   const soundMuted = useSettingsStore((s) => s.soundMuted);
   const toggleSound = useSettingsStore((s) => s.toggleSound);
@@ -85,6 +87,8 @@ export function MapControls({
             color={colors.onSurface}
             weight="semibold"
           />
+          {/* A newer test build is ready (Settings → App updates). */}
+          {updateReady ? <View style={[styles.dot, { backgroundColor: colors.badge }]} /> : null}
         </MapButton>
         {!following && (
           <Animated.View entering={ZoomIn.springify()} exiting={ZoomOut.duration(150)}>
@@ -140,6 +144,7 @@ export function MapControls({
 }
 
 const styles = StyleSheet.create({
+  dot: { position: 'absolute', top: 9, right: 9, width: 10, height: 10, borderRadius: 5 },
   column: { position: 'absolute', gap: spacing.md },
   bottomRow: {
     position: 'absolute',

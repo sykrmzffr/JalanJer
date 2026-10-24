@@ -2,7 +2,16 @@ import { Redirect, useLocalSearchParams } from 'expo-router';
 
 import { SettingsPage, type SettingsPageId } from '@/features/settings/settings-pages';
 
-const PAGES: SettingsPageId[] = ['general', 'map-display', 'voice', 'navigation', 'vehicle', 'tolls', 'speedometer'];
+const PAGES: SettingsPageId[] = [
+  'general',
+  'map-display',
+  'voice',
+  'navigation',
+  'vehicle',
+  'tolls',
+  'speedometer',
+  'updates',
+];
 
 export default function SettingsDetail() {
   const { page } = useLocalSearchParams<{ page: string }>();

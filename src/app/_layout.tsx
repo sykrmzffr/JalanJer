@@ -8,6 +8,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { FpsOverlay } from '@/dev/fps-overlay';
 import { useAccountSync } from '@/features/account/places-sync-service';
 import { useThemeSetting } from '@/features/settings/use-theme-setting';
+import { useUpdateCheckOnStart } from '@/features/updates/update-store';
 import { initSentry, wrapRoot } from '@/lib/sentry';
 
 initSentry();
@@ -20,6 +21,7 @@ SplashScreen.setOptions({ fade: true, duration: 250 });
 function RootLayout() {
   useThemeSetting();
   useAccountSync();
+  useUpdateCheckOnStart();
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <StatusBar style="auto" />

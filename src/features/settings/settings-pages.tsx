@@ -3,6 +3,8 @@ import { useRouter } from 'expo-router';
 import { Alert, Linking } from 'react-native';
 
 import { useAccountStore } from '@/features/account/account-store';
+import { UpdatesPage } from '@/features/updates/updates-page';
+import { UPDATES_SUPPORTED, useUpdateStore } from '@/features/updates/update-store';
 import { usePlacesStore } from '@/stores/places-store';
 import { useSettingsStore, type ThemeSetting } from '@/stores/settings-store';
 
@@ -18,9 +20,18 @@ const BADGE = {
   vehicle: '#1FB5E8',
   tolls: '#3B3D42',
   speedometer: '#F25C3A',
+  updates: '#2DAA5F',
 } as const;
 
-export type SettingsPageId = 'general' | 'map-display' | 'voice' | 'navigation' | 'vehicle' | 'tolls' | 'speedometer';
+export type SettingsPageId =
+  | 'general'
+  | 'map-display'
+  | 'voice'
+  | 'navigation'
+  | 'vehicle'
+  | 'tolls'
+  | 'speedometer'
+  | 'updates';
 
 const THEME_LABEL: Record<ThemeSetting, string> = { system: 'Automatic', light: 'Light', dark: 'Dark' };
 
@@ -31,6 +42,7 @@ export function SettingsHome() {
   const vehicle = useSettingsStore((s) => s.vehicle);
   const open = (page: SettingsPageId) => router.push({ pathname: '/settings/[page]', params: { page } });
   const email = useAccountStore((s) => s.session?.user.email);
+  const updateReady = useUpdateStore((s) => s.status === 'available');
 
   return (
     <SettingsScreen title="Settings">
@@ -92,6 +104,17 @@ export function SettingsHome() {
           onPress={() => open('speedometer')}
         />
       </Section>
+      {UPDATES_SUPPORTED ? (
+        <Section>
+          <NavRow
+            label="App updates"
+            value={updateReady ? 'New build ready' : undefined}
+            icon={{ ios: 'arrow.down.circle.fill', android: 'system_update' }}
+            iconColor={BADGE.updates}
+            onPress={() => open('updates')}
+          />
+        </Section>
+      ) : null}
     </SettingsScreen>
   );
 }
@@ -112,6 +135,8 @@ export function SettingsPage({ page }: { page: SettingsPageId }) {
       return <TollsPage />;
     case 'speedometer':
       return <SpeedometerPage />;
+    case 'updates':
+      return <UpdatesPage />;
   }
 }
 
