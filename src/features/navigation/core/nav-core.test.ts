@@ -3,10 +3,13 @@ import { describe, it } from 'node:test';
 
 import type { LngLatTuple, Maneuver, Route } from '../../route/core/valhalla-core.ts';
 import {
+  aheadOnRoute,
   type Fix,
   formatManeuverDistance,
   initialState,
+  maneuverArrow,
   type NavState,
+  placeOnRoute,
   prepareRoute,
   progress,
   segmentBearing,
@@ -180,5 +183,54 @@ describe('practice drive', () => {
     const fix = simulatedFix(prepared, 10_000, 20, 0); // 200 m after 10 s
     const snap = snapToRoute(prepared, fix.coordinate);
     assert.ok(Math.abs(snap.along - 200) < 1, `along ${snap.along}`);
+  });
+});
+
+describe('placeOnRoute / aheadOnRoute', () => {
+  const items = [
+    { id: 'on-south-leg', coordinate: [101.5101, 3.065] as LngLatTuple },
+    { id: 'on-east-leg', coordinate: [101.503, 3.0701] as LngLatTuple },
+    { id: 'off-route', coordinate: [101.505, 3.072] as LngLatTuple },
+    { id: 'far-away', coordinate: [101.7, 3.1] as LngLatTuple },
+  ];
+
+  it('keeps points near the route, sorted along it', () => {
+    const placed = placeOnRoute(prepared, items);
+    assert.deepEqual(
+      placed.map((x) => x.item.id),
+      ['on-east-leg', 'on-south-leg'],
+    );
+    assert.ok(Math.abs(placed[0].along - 333) < 5);
+    assert.ok(Math.abs(placed[1].along - (prepared.maneuverAt[1] + 553)) < 5);
+  });
+
+  it('lists only what is still ahead, with distance from you', () => {
+    const ahead = aheadOnRoute(placeOnRoute(prepared, items), 500);
+    assert.equal(ahead.length, 1);
+    assert.equal(ahead[0].item.id, 'on-south-leg');
+    assert.ok(Math.abs(ahead[0].distance - (prepared.maneuverAt[1] + 553 - 500)) < 5);
+  });
+});
+
+describe('maneuverArrow', () => {
+  it('follows the road through the turn and points along the new road', () => {
+    const arrow = maneuverArrow(prepared, 1);
+    assert.ok(arrow);
+    // Starts on the east leg, passes the corner, ends on the south leg.
+    assert.equal(arrow.shaft[0][1], 3.07);
+    assert.ok(arrow.shaft[0][0] < 101.51);
+    assert.ok(arrow.shaft.some(([lng, lat]) => lng === 101.51 && lat === 3.07));
+    const tip = arrow.shaft[arrow.shaft.length - 1];
+    assert.ok(Math.abs(tip[0] - 101.51) < 1e-9 && tip[1] < 3.07);
+    // Head: closed triangle whose point is further south than the tip.
+    assert.equal(arrow.head.length, 4);
+    assert.deepEqual(arrow.head[0], arrow.head[3]);
+    assert.ok(arrow.head[1][1] < tip[1]);
+    assert.ok(Math.abs(arrow.head[1][0] - 101.51) < 1e-7);
+  });
+
+  it('draws nothing for the start or the destination', () => {
+    assert.equal(maneuverArrow(prepared, 0), null);
+    assert.equal(maneuverArrow(prepared, 2), null);
   });
 });

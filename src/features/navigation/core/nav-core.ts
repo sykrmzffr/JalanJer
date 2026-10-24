@@ -314,6 +314,99 @@ export function progress(p: PreparedRoute, state: NavState): Progress {
   };
 }
 
+// ── Things on the route (reports) ──
+
+/** Something placed on the route: `along` is its distance from the route start (m). */
+export type OnRoute<T> = { item: T; along: number };
+
+/**
+ * Places points (e.g. reports) on the route: those within `maxDistance` metres of
+ * the route line, sorted by distance along it. Points near a road that crosses or
+ * runs beside the route also count; we don't know which direction a report was for.
+ */
+export function placeOnRoute<T extends { coordinate: LngLatTuple }>(
+  p: PreparedRoute,
+  items: readonly T[],
+  maxDistance = 40,
+): OnRoute<T>[] {
+  if (p.route.coordinates.length < 2) return [];
+  // Cheap box check first (about 1 km margin) so far-away points skip the full search.
+  const { minLon, minLat, maxLon, maxLat } = p.route.bounds;
+  const margin = 0.01;
+  const out: OnRoute<T>[] = [];
+  for (const item of items) {
+    const [lng, lat] = item.coordinate;
+    if (lng < minLon - margin || lng > maxLon + margin || lat < minLat - margin || lat > maxLat + margin) continue;
+    const snap = snapToRoute(p, item.coordinate);
+    if (snap.distance <= maxDistance) out.push({ item, along: snap.along });
+  }
+  return out.sort((a, b) => a.along - b.along);
+}
+
+/** Placed items still ahead of you, with their distance from you (m). */
+export function aheadOnRoute<T>(placed: readonly OnRoute<T>[], distanceAlong: number): { item: T; distance: number }[] {
+  return placed
+    .filter((x) => x.along > distanceAlong)
+    .map((x) => ({ item: x.item, distance: x.along - distanceAlong }));
+}
+
+/** How far ahead to warn about a report, by speed (m). Chosen values, not from a study. */
+export function reportWarningDistance(speedMps: number | null): number {
+  return (speedMps ?? DEFAULT_SPEED_MPS) > 22 ? 1000 : 500;
+}
+
+// ── Turn arrow drawn on the road ──
+
+export type ManeuverArrow = {
+  /** Line along the road up to the arrow head. */
+  shaft: LngLatTuple[];
+  /** Closed triangle ring (first point repeated at the end). */
+  head: LngLatTuple[];
+};
+
+// Valhalla types with no turn to show: start, destinations, "becomes", "continue".
+const NO_ARROW = new Set([1, 2, 3, 4, 5, 6, 7, 8]);
+
+/** Offsets a point by metres east/north. */
+function offset([lng, lat]: LngLatTuple, east: number, north: number): LngLatTuple {
+  const cosLat = Math.cos((lat * Math.PI) / 180);
+  return [lng + east / (EARTH_M_PER_DEG_LNG_EQUATOR * cosLat), lat + north / EARTH_M_PER_DEG_LAT];
+}
+
+/**
+ * Arrow following the road through maneuver `index`: from `before` metres before
+ * it to `after` metres after (not past the next maneuver), ending in a triangle.
+ * Null for maneuvers that aren't turns (start, arrive, continue).
+ */
+export function maneuverArrow(
+  p: PreparedRoute,
+  index: number,
+  { before = 35, after = 25, headLength = 12, headWidth = 14 } = {},
+): ManeuverArrow | null {
+  const maneuver = p.route.maneuvers[index];
+  if (!maneuver || NO_ARROW.has(maneuver.type)) return null;
+  const at = p.maneuverAt[index];
+  const start = Math.max(0, at - before);
+  const end = Math.min(p.total, at + after, (p.maneuverAt[index + 1] ?? p.total) - 2);
+  if (end - start < 10) return null;
+
+  const shaft: LngLatTuple[] = [pointAtDistance(p, start).point];
+  for (let i = 0; i < p.cumulative.length; i++) {
+    if (p.cumulative[i] > start && p.cumulative[i] < end) shaft.push(p.route.coordinates[i]);
+  }
+  const tip = pointAtDistance(p, end).point;
+  shaft.push(tip);
+
+  // Head direction: the last few metres of the shaft.
+  const dir = (bearing(pointAtDistance(p, end - 4).point, tip) * Math.PI) / 180;
+  const ux = Math.sin(dir);
+  const uy = Math.cos(dir);
+  const point = offset(tip, ux * headLength, uy * headLength);
+  const left = offset(tip, -uy * (headWidth / 2), ux * (headWidth / 2));
+  const right = offset(tip, uy * (headWidth / 2), -ux * (headWidth / 2));
+  return { shaft, head: [left, point, right, left] };
+}
+
 /**
  * Practice drive: fake GPS fixes moving along the route at `speedMps`, one per
  * `intervalMs`. Lets you try navigation without driving.

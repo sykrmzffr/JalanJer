@@ -1,6 +1,6 @@
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -19,6 +19,7 @@ import { useReportsStore } from '@/features/reports/reports-store';
 
 import type { NavigationView } from '../use-navigation';
 import { NavBanner } from './nav-banner';
+import { TurnList } from './turn-list';
 
 /** Fraction of the screen (from the top) where the car arrow sits; the camera centers there. */
 export const PUCK_SCREEN_FRACTION = 0.68;
@@ -56,6 +57,9 @@ export function NavigationOverlay({ nav, onEnd }: NavigationOverlayProps) {
     return () => clearTimeout(timer);
   }, [promptId]);
 
+  const [listOpen, setListOpen] = useState(false);
+  const closeList = useCallback(() => setListOpen(false), []);
+
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const practice = nav.practice;
@@ -78,7 +82,7 @@ export function NavigationOverlay({ nav, onEnd }: NavigationOverlayProps) {
 
   return (
     <View pointerEvents="box-none" style={StyleSheet.absoluteFill}>
-      <NavBanner nav={nav} />
+      <NavBanner nav={nav} onPress={() => setListOpen(true)} />
 
       {/* Car arrow: fixed on screen; the map moves and turns under it. */}
       <View pointerEvents="none" style={[styles.puckWrap, { top: `${PUCK_SCREEN_FRACTION * 100}%` }]}>
@@ -174,6 +178,8 @@ export function NavigationOverlay({ nav, onEnd }: NavigationOverlayProps) {
           onClose={() => setDismissed((d) => ({ ...d, [prompt.id]: true }))}
         />
       ) : null}
+
+      {listOpen ? <TurnList nav={nav} onClose={closeList} /> : null}
     </View>
   );
 }

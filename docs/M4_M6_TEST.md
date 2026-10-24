@@ -2,7 +2,7 @@
 
 ## Before you start
 
-- Supabase → **SQL Editor** → run `supabase/migrations/0002_reports.sql` (reports need it).
+- Supabase → **SQL Editor** → run `supabase/migrations/0002_reports.sql` (done ✓).
 - Install the newest `JalanJer-Android-release-….apk` (Actions → Android build, branch
   `main-kdl2pb`).
 
@@ -20,6 +20,9 @@
    - [ ] All banner arrows show (none blank). If one is blank, tell me which turn.
    - [ ] At the end: "You have arrived", ✕ becomes ✓; tap it to finish.
    - [ ] ✕ during the drive asks "End navigation?"; Android Back does too.
+   - [ ] White turn arrow on the road at the next turn (from 600 m away). Right size? Lined up?
+   - [ ] Tap the black banner → turn list. **Next turns** lists the turns; roundabouts show a
+         ring with the exit number. **CLOSE** and Android Back close it (navigation keeps going).
 4. Turn Practice drive **off** afterwards.
 
 ## B. Real drive (passenger holds the phone, or mount it)
@@ -41,6 +44,11 @@
 5. While navigating past someone else's report (within ~150 m): a "… still there?" card pops up and
    hides itself after ~12 s.
 6. Signed out: + → asks you to sign in.
+7. Report something on a road, then (second account, or ask a friend) practice-drive a route
+   along that road:
+   - [ ] About 500 m before it, the voice says "… reported ahead, in 500 meters". Only once.
+   - [ ] Banner → **Reports ahead** lists it with the distance, counting down.
+   - [ ] Your own reports are listed but not spoken.
 
 ## Send back
 
@@ -48,4 +56,5 @@
 Practice drive smooth? Y/N | voice timing OK? Y/N | blank arrows? which:
 Real drive: reroute worked? Y/N | anything wrong:
 Reports: send OK? Y/N | pin shows? Y/N | votes OK? Y/N
+Turn arrow OK? Y/N | turn list OK? Y/N | report spoken ahead? Y/N
 ```

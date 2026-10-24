@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon } from '@/components/icon/icon';
@@ -12,10 +12,17 @@ import type { NavigationView } from '../use-navigation';
 const AND_THEN_WITHIN_M = 400;
 
 // Waze-style banner colors (dark bar, light-blue street name). Same in light and dark mode.
-const BANNER = { bar: '#000000', subBar: '#1C1D21', text: '#FFFFFF', street: '#33C4F2' } as const;
+export const BANNER = { bar: '#000000', subBar: '#1C1D21', text: '#FFFFFF', street: '#33C4F2' } as const;
+
+type NavBannerProps = {
+  nav: NavigationView;
+  onLayout?: (height: number) => void;
+  /** Tap the banner (opens the turn list). */
+  onPress?: () => void;
+};
 
 /** Top banner: next turn arrow, distance and street; "and then" row for a quick follow-up turn. */
-export function NavBanner({ nav, onLayout }: { nav: NavigationView; onLayout?: (height: number) => void }) {
+export function NavBanner({ nav, onLayout, onPress }: NavBannerProps) {
   const insets = useSafeAreaInsets();
   const { maneuvers } = nav.prepared.route;
   const nextIndex = nav.progress.next;
@@ -33,10 +40,14 @@ export function NavBanner({ nav, onLayout }: { nav: NavigationView; onLayout?: (
         : '';
 
   return (
-    <View
+    <Pressable
       onLayout={(e) => onLayout?.(e.nativeEvent.layout.height)}
+      onPress={onPress}
+      disabled={!onPress}
       style={styles.wrap}
       accessible
+      accessibilityRole={onPress ? 'button' : undefined}
+      accessibilityHint={onPress ? 'Shows the next turns and reports ahead' : undefined}
       accessibilityLiveRegion="polite"
       accessibilityLabel={
         next && !nav.state.arrived
@@ -68,7 +79,7 @@ export function NavBanner({ nav, onLayout }: { nav: NavigationView; onLayout?: (
           <Icon name={maneuverIcon(after.type)} size={28} color={BANNER.text} weight="bold" />
         </View>
       ) : null}
-    </View>
+    </Pressable>
   );
 }
 

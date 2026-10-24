@@ -10,6 +10,7 @@ import { Button } from '@/components/button';
 import { BottomSheet } from '@/components/sheet/bottom-sheet';
 import { HomeSheetHeader } from '@/features/home-sheet/home-sheet-header';
 import { RecentsList } from '@/features/home-sheet/recents-list';
+import { NavManeuverArrow } from '@/features/navigation/components/nav-maneuver-arrow';
 import { NavRouteLine } from '@/features/navigation/components/nav-route-line';
 import { NavigationOverlay, PUCK_SCREEN_FRACTION } from '@/features/navigation/components/navigation-overlay';
 import { NavigationSession, useNavView } from '@/features/navigation/navigation-session';
@@ -258,7 +259,10 @@ export function HomeMap() {
         />
         {granted && !navigating && <NativeUserLocation mode="heading" />}
         {navRoute ? (
-          <NavRouteLine route={navRoute} />
+          <>
+            <NavRouteLine route={navRoute} />
+            <NavManeuverArrow />
+          </>
         ) : (
           <RouteLines routes={routes} selectedId={selectedId} onSelect={selectRoute} />
         )}

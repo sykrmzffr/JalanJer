@@ -35,10 +35,12 @@ Until that's done, reporting shows "Couldn't send the report" and no pins appear
 The lifetimes are starting values I chose, not taken from Waze or any study. Change them
 in `report_lifetime()` in the SQL file and run it again.
 
+- **While navigating**: reports on your route are spoken once ("Police reported ahead,
+  in 500 meters"), and listed in the turn list (tap the banner → **Reports ahead**).
+  See `docs/NAVIGATION.md` for the distances and the "other side of the road" limit.
+
 ## Not done yet
 
-- Reports ahead **on your route** in the turn list ("Reports ahead" tab, plan item 5).
-- Spoken warnings ("Police reported ahead").
 - Photos or comments on reports; editing or deleting your own report.
 - Moderation tools.
 

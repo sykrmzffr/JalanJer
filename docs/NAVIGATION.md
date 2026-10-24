@@ -12,6 +12,14 @@
    On Android the Back button does the same.
 5. Leave the route and after about 3 seconds it says "Rerouting" and finds a new route.
 6. At the end: "You have arrived", and the ✕ becomes a ✓ (Done).
+7. A white **turn arrow** is drawn on the road at the next turn once it's within 600 m.
+8. Tap the black banner for the **turn list**: **Next turns** (every turn still to come;
+   each distance is from the turn before it, like Waze; roundabouts show the exit number)
+   and **Reports ahead** (reports on your route, nearest first). **CLOSE** or Android Back
+   closes it.
+9. Reports on your route are **spoken** once, e.g. "Police reported ahead, in 500 meters"
+   (500 m ahead in town, 1 km above about 80 km/h). Not for your own reports. Muted with
+   the speaker button like the turns.
 
 **Practice drive** (Settings → Navigation → Practice drive): fake GPS that drives the route
 at 50 km/h, so you can try all of this at home. The Go button then says "Practice drive".
@@ -23,7 +31,7 @@ The screen stays on while navigating.
 | Plan item | Status |
 |---|---|
 | Keeps working with the **screen locked** (background location) | Not yet. The screen stays on instead. Background mode needs extra permissions and native config; next step. |
-| Turn arrow drawn **on the road**, upcoming-street label on the map | Not yet (the banner shows it) |
+| Upcoming-street label on the map | Not yet (the banner shows it) |
 | ETA sheet: search along route, alternative routes while driving | Not yet |
 | Speed-limit warnings | Need speed-limit data (not invented) |
 | Malay voice | Valhalla's instructions are English only (no Malay in its list) |
@@ -47,6 +55,14 @@ The screen stays on while navigating.
   (`maneuver-icon.ts`). If an arrow is missing on a phone, the icon name is wrong there:
   tell me which turn.
 
+- Turn arrow: `components/nav-maneuver-arrow.tsx`, shape from `maneuverArrow` in nav-core.
+  Sizes are in metres on the ground (4 m wide line, 14 m wide head), so it scales with zoom.
+- Reports on the route: `placeOnRoute` in nav-core + `route-reports.ts`. A report counts
+  when it's within 40 m of the route line. We don't store which direction a report was
+  for, so one on the other side of a divided highway (or a road right beside the route)
+  also counts. The 40 m, 500 m / 1 km and 600 m values are my starting choices, not from
+  a study; change them in the code if they feel wrong on the road.
+
 ## Things to check on a phone
 
 1. Do turns get announced at sensible moments (not too early or late)?
@@ -54,3 +70,4 @@ The screen stays on while navigating.
 3. Does rerouting kick in when you deliberately take a wrong turn, and not when GPS is
    just a bit off?
 4. Are all banner arrows visible (none blank)?
+5. Is the turn arrow on the road the right size and lined up with the route line?
