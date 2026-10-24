@@ -12,6 +12,7 @@ import {
   NO_AVOID,
   parseRouteResponse,
   type LngLatTuple,
+  type Maneuver,
 } from './valhalla-core.ts';
 
 // Response shape follows Valhalla's route API reference. Values are invented
@@ -164,49 +165,24 @@ describe('formatting', () => {
 });
 
 describe('mainRoads', () => {
+  const m = (streetNames: string[], length: number): Maneuver => ({
+    type: 1,
+    instruction: '',
+    streetNames,
+    length,
+    time: 0,
+    beginShapeIndex: 0,
+    toll: false,
+    highway: false,
+    verbalAlert: '',
+    verbalPre: '',
+    verbalPost: '',
+    beginStreetNames: [],
+    roundaboutExitCount: null,
+  });
+
   it('ranks named roads by total length', () => {
-    const roads = mainRoads([
-      {
-        type: 1,
-        instruction: '',
-        streetNames: ['A'],
-        length: 100,
-        time: 0,
-        beginShapeIndex: 0,
-        toll: false,
-        highway: false,
-      },
-      {
-        type: 1,
-        instruction: '',
-        streetNames: ['B'],
-        length: 500,
-        time: 0,
-        beginShapeIndex: 0,
-        toll: false,
-        highway: false,
-      },
-      {
-        type: 1,
-        instruction: '',
-        streetNames: ['A'],
-        length: 450,
-        time: 0,
-        beginShapeIndex: 0,
-        toll: false,
-        highway: false,
-      },
-      {
-        type: 1,
-        instruction: '',
-        streetNames: [],
-        length: 9999,
-        time: 0,
-        beginShapeIndex: 0,
-        toll: false,
-        highway: false,
-      },
-    ]);
+    const roads = mainRoads([m(['A'], 100), m(['B'], 500), m(['A'], 450), m([], 9999)]);
     assert.deepEqual(roads, ['A', 'B']);
   });
 });

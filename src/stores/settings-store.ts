@@ -25,6 +25,9 @@ type SettingsState = {
   toggleSpeedometer: () => void;
   tollPasses: TollPasses;
   toggleTollPass: (key: keyof TollPasses) => void;
+  /** Navigation uses fake GPS that drives along the route (for trying it out at home). */
+  practiceDrive: boolean;
+  togglePracticeDrive: () => void;
 };
 
 export const useSettingsStore = create<SettingsState>()(
@@ -42,11 +45,14 @@ export const useSettingsStore = create<SettingsState>()(
       toggleSpeedometer: () => set((state) => ({ showSpeedometer: !state.showSpeedometer })),
       tollPasses: { touchNGo: false, rfid: false, smartTag: false },
       toggleTollPass: (key) => set((state) => ({ tollPasses: { ...state.tollPasses, [key]: !state.tollPasses[key] } })),
+      practiceDrive: false,
+      togglePracticeDrive: () => set((state) => ({ practiceDrive: !state.practiceDrive })),
     }),
     {
       name: 'settings',
       storage: createJSONStorage(() => zustandStorage),
-      partialize: ({ soundMuted, avoid, theme, vehicle, showSpeedometer, tollPasses }) => ({
+      partialize: ({ soundMuted, avoid, theme, vehicle, showSpeedometer, tollPasses, practiceDrive }) => ({
+        practiceDrive,
         soundMuted,
         avoid,
         theme,

@@ -167,7 +167,9 @@ export function HomeMap() {
         <Camera
           ref={cameraRef}
           initialViewState={{ center: SHAH_ALAM, zoom: DEFAULT_ZOOM }}
-          trackUserLocation={granted && followActive ? 'heading' : undefined}
+          // Follow position only, map stays north-up. 'heading' rotated the map with the
+          // compass, which jitters constantly. The puck still shows which way you face.
+          trackUserLocation={granted && followActive ? 'default' : undefined}
           onTrackUserLocationChange={(event) =>
             // MapLibre stops following when you pan the map yourself.
             setFollowing(event.nativeEvent.trackUserLocation != null)

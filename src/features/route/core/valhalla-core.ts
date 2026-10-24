@@ -34,6 +34,15 @@ export type Maneuver = {
   beginShapeIndex: number;
   toll: boolean;
   highway: boolean;
+  /** Spoken well before the turn, e.g. "Turn right onto Jalan Ilmu". */
+  verbalAlert: string;
+  /** Spoken just before the turn. */
+  verbalPre: string;
+  /** Spoken just after the turn, e.g. "Continue for 2 kilometers". */
+  verbalPost: string;
+  /** Street names at the start of the turn when different from `streetNames`. */
+  beginStreetNames: string[];
+  roundaboutExitCount: number | null;
 };
 
 export type Route = {
@@ -142,6 +151,11 @@ type ValhallaManeuver = {
   begin_shape_index?: number;
   toll?: boolean;
   highway?: boolean;
+  verbal_transition_alert_instruction?: string;
+  verbal_pre_transition_instruction?: string;
+  verbal_post_transition_instruction?: string;
+  begin_street_names?: string[];
+  roundabout_exit_count?: number;
 };
 
 type ValhallaTrip = {
@@ -201,6 +215,11 @@ function parseTrip(trip: ValhallaTrip | undefined, id: string): Route | null {
         beginShapeIndex: (m.begin_shape_index ?? 0) + Math.max(0, offset - 1),
         toll: m.toll ?? false,
         highway: m.highway ?? false,
+        verbalAlert: m.verbal_transition_alert_instruction ?? '',
+        verbalPre: m.verbal_pre_transition_instruction ?? m.instruction ?? '',
+        verbalPost: m.verbal_post_transition_instruction ?? '',
+        beginStreetNames: m.begin_street_names ?? [],
+        roundaboutExitCount: m.roundabout_exit_count ?? null,
       });
     }
   }
