@@ -5,13 +5,15 @@ import { type Place, usePlacesStore } from '@/stores/places-store';
 import { minTouchTarget, radius, spacing, typography, useColors } from '@/theme';
 
 type HomeSheetHeaderProps = {
-  /** Opens search. Until Milestone 2 (search) this expands the sheet. */
+  /** Opens the search screen. */
   onSearchPress: () => void;
+  /** Opens search and starts listening. */
+  onVoicePress: () => void;
   onPlacePress: (place: Place | null, kind: 'home' | 'work' | 'saved') => void;
 };
 
 /** Always-visible part of the home sheet: "Where to?" field and place chips. */
-export function HomeSheetHeader({ onSearchPress, onPlacePress }: HomeSheetHeaderProps) {
+export function HomeSheetHeader({ onSearchPress, onVoicePress, onPlacePress }: HomeSheetHeaderProps) {
   const colors = useColors();
   const home = usePlacesStore((s) => s.home);
   const work = usePlacesStore((s) => s.work);
@@ -27,14 +29,18 @@ export function HomeSheetHeader({ onSearchPress, onPlacePress }: HomeSheetHeader
       >
         <Icon name={{ ios: 'magnifyingglass', android: 'search' }} size={20} color={colors.onSurfaceVariant} />
         <Text style={[styles.searchText, { color: colors.onSurfaceVariant }]}>Where to?</Text>
-        <Icon name={{ ios: 'mic', android: 'mic' }} size={20} color={colors.onSurface} />
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Search by voice"
+          onPress={onVoicePress}
+          hitSlop={12}
+          style={styles.mic}
+        >
+          <Icon name={{ ios: 'mic', android: 'mic' }} size={20} color={colors.onSurface} />
+        </Pressable>
       </Pressable>
 
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.chips}
-      >
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
         <Chip
           label="Home"
           icon={{ ios: 'house.fill', android: 'home' }}
@@ -100,6 +106,13 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   searchText: { ...typography.bodyLarge, flex: 1 },
+  mic: {
+    width: minTouchTarget,
+    height: minTouchTarget,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: -spacing.md,
+  },
   chips: { paddingHorizontal: spacing.lg, gap: spacing.sm },
   chip: {
     minHeight: Math.max(minTouchTarget, 52),

@@ -22,7 +22,8 @@
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "permissions": ["android.permission.REQUEST_INSTALL_PACKAGES"]
     },
     "plugins": [
       "expo-router",
@@ -49,7 +50,18 @@
         {
           "disableAutoUpload": true
         }
-      ]
+      ],
+      [
+        "expo-speech-recognition",
+        {
+          "microphonePermission": "JalanJer! uses the microphone when you tap the mic to search by voice.",
+          "speechRecognitionPermission": "JalanJer! turns what you say into a search when you tap the mic.",
+          "androidSpeechServicePackages": [
+            "com.google.android.googlequicksearchbox"
+          ]
+        }
+      ],
+      "expo-image"
     ],
     "experiments": {
       "typedRoutes": true,

@@ -1,12 +1,36 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
+import type { AvoidOptions, Vehicle } from '@/features/route/core/valhalla-core';
 import { zustandStorage } from '@/lib/storage';
+
+export type ThemeSetting = 'system' | 'light' | 'dark';
+
+/** Toll payment methods the driver has. Informational for now; later used for toll prices. */
+export type TollPasses = { touchNGo: boolean; rfid: boolean; smartTag: boolean };
 
 type SettingsState = {
   /** Spoken directions and alert sounds off. */
   soundMuted: boolean;
   toggleSound: () => void;
+  /** Route preferences from the Avoid menu. Remembered between drives, like Waze. */
+  avoid: AvoidOptions;
+  toggleAvoid: (key: keyof AvoidOptions) => void;
+  /** Light/dark for the app and the map. "system" follows the phone. */
+  theme: ThemeSetting;
+  setTheme: (theme: ThemeSetting) => void;
+  vehicle: Vehicle;
+  setVehicle: (vehicle: Vehicle) => void;
+  showSpeedometer: boolean;
+  toggleSpeedometer: () => void;
+  tollPasses: TollPasses;
+  toggleTollPass: (key: keyof TollPasses) => void;
+  /** Navigation uses fake GPS that drives along the route (for trying it out at home). */
+  practiceDrive: boolean;
+  togglePracticeDrive: () => void;
+  /** Practice drive speed (km/h). Changeable while practice-driving too. */
+  practiceSpeedKmh: number;
+  setPracticeSpeed: (kmh: number) => void;
 };
 
 export const useSettingsStore = create<SettingsState>()(
@@ -14,11 +38,43 @@ export const useSettingsStore = create<SettingsState>()(
     (set) => ({
       soundMuted: false,
       toggleSound: () => set((state) => ({ soundMuted: !state.soundMuted })),
+      avoid: { tolls: false, highways: false, ferries: false },
+      toggleAvoid: (key) => set((state) => ({ avoid: { ...state.avoid, [key]: !state.avoid[key] } })),
+      theme: 'system',
+      setTheme: (theme) => set({ theme }),
+      vehicle: 'car',
+      setVehicle: (vehicle) => set({ vehicle }),
+      showSpeedometer: true,
+      toggleSpeedometer: () => set((state) => ({ showSpeedometer: !state.showSpeedometer })),
+      tollPasses: { touchNGo: false, rfid: false, smartTag: false },
+      toggleTollPass: (key) => set((state) => ({ tollPasses: { ...state.tollPasses, [key]: !state.tollPasses[key] } })),
+      practiceDrive: false,
+      togglePracticeDrive: () => set((state) => ({ practiceDrive: !state.practiceDrive })),
+      practiceSpeedKmh: 50,
+      setPracticeSpeed: (kmh) => set({ practiceSpeedKmh: kmh }),
     }),
     {
       name: 'settings',
       storage: createJSONStorage(() => zustandStorage),
-      partialize: ({ soundMuted }) => ({ soundMuted }),
+      partialize: ({
+        soundMuted,
+        avoid,
+        theme,
+        vehicle,
+        showSpeedometer,
+        tollPasses,
+        practiceDrive,
+        practiceSpeedKmh,
+      }) => ({
+        practiceDrive,
+        practiceSpeedKmh,
+        soundMuted,
+        avoid,
+        theme,
+        vehicle,
+        showSpeedometer,
+        tollPasses,
+      }),
     },
   ),
 );

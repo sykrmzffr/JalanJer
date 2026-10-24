@@ -1,10 +1,16 @@
-import type { LngLat } from '@maplibre/maplibre-react-native';
+import type { LngLat, StyleSpecification } from '@maplibre/maplibre-react-native';
 
-/** OpenFreeMap styles. Free, no API key. Light by day, dark by night (follows the phone). */
-export const MAP_STYLE_URL = {
-  light: 'https://tiles.openfreemap.org/styles/liberty',
+import lightStyle from './styles/light.json';
+
+/**
+ * Map styles (OpenFreeMap tiles, free, no API key). Light follows the phone's theme.
+ * Light is our own flat, Waze-like version of OpenFreeMap "liberty", bundled with the
+ * app (`npm run map-style`, docs/MAP_STYLE.md). Dark is OpenFreeMap's own (already flat).
+ */
+export const MAP_STYLE: { light: StyleSpecification; dark: string } = {
+  light: lightStyle as StyleSpecification,
   dark: 'https://tiles.openfreemap.org/styles/dark',
-} as const;
+};
 
 /** Shah Alam city centre, as [longitude, latitude]. */
 export const SHAH_ALAM: LngLat = [101.5183, 3.0733];

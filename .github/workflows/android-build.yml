@@ -6,6 +6,10 @@
 #
 # Both are signed with Android's standard debug key, which is fine for testing
 # on your own phone but not for the Play Store (that comes in Milestone 7).
+#
+# The release .apk is also published to the "android-latest" GitHub release
+# (JalanJer-latest.apk + latest.json), which the app's Settings → App updates
+# button downloads. See docs/UPDATES.md.
 name: Android build
 
 on:
@@ -19,11 +23,20 @@ concurrency:
 env:
   CI: '1'
   EXPO_NO_TELEMETRY: '1'
+  # Baked into the release build's JS. Empty = Sentry off. See docs/SENTRY.md.
+  EXPO_PUBLIC_SENTRY_DSN: ${{ vars.EXPO_PUBLIC_SENTRY_DSN }}
+  # Our own search server, once it exists. Empty = public Photon server. See docs/SEARCH.md.
+  EXPO_PUBLIC_PHOTON_URL: ${{ vars.EXPO_PUBLIC_PHOTON_URL }}
+  # Our own routing server, once it exists. Empty = public Valhalla server. See docs/ROUTING.md.
+  EXPO_PUBLIC_VALHALLA_URL: ${{ vars.EXPO_PUBLIC_VALHALLA_URL }}
 
 jobs:
   build:
     name: Android ${{ matrix.variant }}
     runs-on: ubuntu-latest
+    # Write access only so the release build can update the "android-latest" release.
+    permissions:
+      contents: write
     timeout-minutes: 60
     strategy:
       fail-fast: false
@@ -47,6 +60,12 @@ jobs:
 
       - name: Install JS dependencies
         run: npm ci
+
+      # Lets the app know which build it is (Settings → App updates).
+      - name: Stamp the build
+        run: |
+          echo "EXPO_PUBLIC_BUILD_SHA=${{ github.event.pull_request.head.sha || github.sha }}" >> "$GITHUB_ENV"
+          echo "EXPO_PUBLIC_BUILD_TIME=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_ENV"
 
       - name: Generate the native Android project
         run: npx expo prebuild --platform android --clean --no-install
@@ -75,3 +94,33 @@ jobs:
           path: ${{ steps.apk.outputs.path }}
           if-no-files-found: error
           retention-days: 30
+
+      # Same-repo builds only (a fork's pull request can't write releases).
+      - name: Publish as the latest test build
+        if: >-
+          matrix.variant == 'release' &&
+          (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          BRANCH: ${{ github.head_ref || github.ref_name }}
+        run: |
+          tag=android-latest
+          cp "${{ steps.apk.outputs.path }}" "$RUNNER_TEMP/JalanJer-latest.apk"
+          cat > "$RUNNER_TEMP/latest.json" <<JSON
+          {
+            "sha": "$EXPO_PUBLIC_BUILD_SHA",
+            "builtAt": "$EXPO_PUBLIC_BUILD_TIME",
+            "branch": "$BRANCH",
+            "apk": "https://github.com/$REPO/releases/download/$tag/JalanJer-latest.apk"
+          }
+          JSON
+          notes="Newest Android test build, from $BRANCH at ${EXPO_PUBLIC_BUILD_SHA::7} ($EXPO_PUBLIC_BUILD_TIME). The app installs it from Settings → App updates. Signed with the public debug key: for testing only."
+          if ! gh release view "$tag" -R "$REPO" >/dev/null 2>&1; then
+            gh release create "$tag" -R "$REPO" --prerelease --target "$EXPO_PUBLIC_BUILD_SHA" \
+              --title "Latest Android test build" --notes "$notes"
+          fi
+          # APK first, then latest.json, so the app never sees a build whose APK isn't there yet.
+          gh release upload "$tag" "$RUNNER_TEMP/JalanJer-latest.apk" -R "$REPO" --clobber
+          gh release upload "$tag" "$RUNNER_TEMP/latest.json" -R "$REPO" --clobber
+          gh release edit "$tag" -R "$REPO" --notes "$notes"

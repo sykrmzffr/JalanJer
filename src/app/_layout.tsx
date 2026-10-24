@@ -6,6 +6,9 @@ import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { FpsOverlay } from '@/dev/fps-overlay';
+import { useAccountSync } from '@/features/account/places-sync-service';
+import { useThemeSetting } from '@/features/settings/use-theme-setting';
+import { useUpdateCheckOnStart } from '@/features/updates/update-store';
 import { initSentry, wrapRoot } from '@/lib/sentry';
 
 initSentry();
@@ -16,10 +19,21 @@ SplashScreen.preventAutoHideAsync();
 SplashScreen.setOptions({ fade: true, duration: 250 });
 
 function RootLayout() {
+  useThemeSetting();
+  useAccountSync();
+  useUpdateCheckOnStart();
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <StatusBar style="auto" />
-      <Stack screenOptions={{ headerShown: false }} />
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="index" />
+        {/* Search slides up over the map, like Waze. */}
+        <Stack.Screen name="search" options={{ animation: 'slide_from_bottom' }} />
+        <Stack.Screen name="settings/index" />
+        <Stack.Screen name="settings/[page]" />
+        <Stack.Screen name="account" />
+        <Stack.Screen name="report" options={{ animation: 'slide_from_bottom' }} />
+      </Stack>
       {__DEV__ && <FpsOverlay />}
     </GestureHandlerRootView>
   );

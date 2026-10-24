@@ -1,4 +1,5 @@
 import * as Haptics from 'expo-haptics';
+import { useRouter } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 import Animated, {
   Extrapolation,
@@ -11,6 +12,7 @@ import Animated, {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon } from '@/components/icon/icon';
+import { useUpdateStore } from '@/features/updates/update-store';
 import { useSettingsStore } from '@/stores/settings-store';
 import { mapButton, spacing, useColors } from '@/theme';
 
@@ -24,6 +26,11 @@ type MapControlsProps = {
   following: boolean;
   onRecenter: () => void;
   speedKmh: number;
+  /**
+   * Don't render the bottom row (route preview). When faded out it is invisible
+   * but would still catch taps meant for the map.
+   */
+  hideBottomRow?: boolean;
 };
 
 // The bottom row fades out once the sheet is dragged this far above its collapsed height.
@@ -36,11 +43,15 @@ export function MapControls({
   following,
   onRecenter,
   speedKmh,
+  hideBottomRow = false,
 }: MapControlsProps) {
   const colors = useColors();
+  const updateReady = useUpdateStore((s) => s.status === 'available');
   const insets = useSafeAreaInsets();
   const soundMuted = useSettingsStore((s) => s.soundMuted);
   const toggleSound = useSettingsStore((s) => s.toggleSound);
+  const showSpeedometer = useSettingsStore((s) => s.showSpeedometer);
+  const router = useRouter();
 
   // Runs on the UI thread: follows the sheet every frame while it is dragged.
   const bottomRowStyle = useAnimatedStyle(() => {
@@ -52,7 +63,9 @@ export function MapControls({
     );
     return {
       opacity,
-      transform: [{ translateY: -(sheetHeight.get() + spacing.lg) }],
+      // Once fully faded, park the row at the screen bottom, behind the sheet, so the
+      // invisible buttons can't catch taps meant for the map.
+      transform: [{ translateY: opacity === 0 ? 0 : -(sheetHeight.get() + spacing.lg) }],
     };
   });
 
@@ -63,9 +76,19 @@ export function MapControls({
         <MapButton
           shape="square"
           accessibilityLabel="Menu"
-          onPress={() => Haptics.selectionAsync()} // Settings arrive in Milestone 5.
+          onPress={() => {
+            Haptics.selectionAsync();
+            router.push('/settings');
+          }}
         >
-          <Icon name={{ ios: 'line.3.horizontal', android: 'menu' }} size={24} color={colors.onSurface} weight="semibold" />
+          <Icon
+            name={{ ios: 'line.3.horizontal', android: 'menu' }}
+            size={24}
+            color={colors.onSurface}
+            weight="semibold"
+          />
+          {/* A newer test build is ready (Settings → App updates). */}
+          {updateReady ? <View style={[styles.dot, { backgroundColor: colors.badge }]} /> : null}
         </MapButton>
         {!following && (
           <Animated.View entering={ZoomIn.springify()} exiting={ZoomOut.duration(150)}>
@@ -98,23 +121,30 @@ export function MapControls({
       </View>
 
       {/* Bottom row: speedometer and report button, riding on top of the sheet. */}
-      <Animated.View pointerEvents="box-none" style={[styles.bottomRow, bottomRowStyle]}>
-        <Speedometer speedKmh={speedKmh} />
-        <MapButton
-          shape="square"
-          size={mapButton.reportSize}
-          backgroundColor={colors.report}
-          accessibilityLabel="Report"
-          onPress={() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)} // Reports: Milestone 6.
-        >
-          <Icon name={{ ios: 'plus', android: 'add' }} size={30} color={colors.onReport} weight="heavy" />
-        </MapButton>
-      </Animated.View>
+      {!hideBottomRow && (
+        <Animated.View pointerEvents="box-none" style={[styles.bottomRow, bottomRowStyle]}>
+          {/* Empty spacer keeps the report button on the right when the speedometer is off. */}
+          {showSpeedometer ? <Speedometer speedKmh={speedKmh} /> : <View />}
+          <MapButton
+            shape="square"
+            size={mapButton.reportSize}
+            backgroundColor={colors.report}
+            accessibilityLabel="Report"
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+              router.push('/report');
+            }}
+          >
+            <Icon name={{ ios: 'plus', android: 'add' }} size={30} color={colors.onReport} weight="heavy" />
+          </MapButton>
+        </Animated.View>
+      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  dot: { position: 'absolute', top: 9, right: 9, width: 10, height: 10, borderRadius: 5 },
   column: { position: 'absolute', gap: spacing.md },
   bottomRow: {
     position: 'absolute',

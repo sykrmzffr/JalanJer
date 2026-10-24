@@ -12,6 +12,11 @@ There are two builds:
 
 Both use the same app ID, so installing one replaces the other.
 
+**Already have a build from 24 Oct 2026 or later?** Update from inside the app instead:
+☰ → Settings → **App updates** → **Download and install** (see `docs/UPDATES.md`). Also
+without a zip: open the **Latest Android test build** release on GitHub (Releases, right side
+of the repo page) and tap `JalanJer-latest.apk`.
+
 ## 1. Download the .apk
 
 1. Open the pull request on GitHub → **Checks** tab → **Android build** → **Summary**.
