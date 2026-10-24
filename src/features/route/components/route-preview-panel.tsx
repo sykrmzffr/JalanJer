@@ -1,5 +1,5 @@
 import * as Haptics from 'expo-haptics';
-import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View, type LayoutChangeEvent } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View, type LayoutChangeEvent } from 'react-native';
 import Animated, { FadeInDown, FadeOutDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -16,6 +16,8 @@ type RoutePreviewPanelProps = {
   selectedId: string | null;
   onSelect: (id: string) => void;
   onLayout: (event: LayoutChangeEvent) => void;
+  /** Starts turn-by-turn on the selected route. */
+  onGo: () => void;
 };
 
 const AVOID_LABELS: { key: keyof AvoidOptions; label: string }[] = [
@@ -25,11 +27,12 @@ const AVOID_LABELS: { key: keyof AvoidOptions; label: string }[] = [
 ];
 
 /** Bottom panel of the route preview: Avoid toggles, up to 3 routes, and Go. */
-export function RoutePreviewPanel({ state, selectedId, onSelect, onLayout }: RoutePreviewPanelProps) {
+export function RoutePreviewPanel({ state, selectedId, onSelect, onLayout, onGo }: RoutePreviewPanelProps) {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const avoid = useSettingsStore((s) => s.avoid);
   const toggleAvoid = useSettingsStore((s) => s.toggleAvoid);
+  const practiceDrive = useSettingsStore((s) => s.practiceDrive);
 
   const fastestId = state.routes.reduce<Route | null>(
     (best, r) => (!best || r.duration < best.duration ? r : best),
@@ -185,11 +188,12 @@ export function RoutePreviewPanel({ state, selectedId, onSelect, onLayout }: Rou
 
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel="Go now"
+        accessibilityLabel={practiceDrive ? 'Start practice drive' : 'Go now'}
         disabled={state.status !== 'done'}
-        onPress={() =>
-          Alert.alert('Coming soon', 'Turn-by-turn navigation is the next milestone. For now you can preview routes.')
-        }
+        onPress={() => {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+          onGo();
+        }}
         style={({ pressed }) => [
           styles.go,
           {
@@ -198,7 +202,9 @@ export function RoutePreviewPanel({ state, selectedId, onSelect, onLayout }: Rou
           },
         ]}
       >
-        <Text style={[typography.titleMedium, { color: colors.onPrimary }]}>Go now</Text>
+        <Text style={[typography.titleMedium, { color: colors.onPrimary }]}>
+          {practiceDrive ? 'Practice drive' : 'Go now'}
+        </Text>
       </Pressable>
     </Animated.View>
   );

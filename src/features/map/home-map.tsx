@@ -2,7 +2,7 @@ import { Camera, type CameraRef, Map, Marker, NativeUserLocation } from '@maplib
 import { useRouter } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { BackHandler, Linking, StyleSheet, Text, useColorScheme, useWindowDimensions, View } from 'react-native';
+import { Alert, BackHandler, Linking, StyleSheet, Text, useColorScheme, useWindowDimensions, View } from 'react-native';
 import { useSharedValue, withSpring } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -10,11 +10,16 @@ import { Button } from '@/components/button';
 import { BottomSheet } from '@/components/sheet/bottom-sheet';
 import { HomeSheetHeader } from '@/features/home-sheet/home-sheet-header';
 import { RecentsList } from '@/features/home-sheet/recents-list';
+import { NavRouteLine } from '@/features/navigation/components/nav-route-line';
+import { NavigationOverlay, PUCK_SCREEN_FRACTION } from '@/features/navigation/components/navigation-overlay';
+import { NavigationSession, useNavView } from '@/features/navigation/navigation-session';
 import { RouteLines } from '@/features/route/components/route-lines';
 import { RoutePreviewPanel } from '@/features/route/components/route-preview-panel';
 import { useRoutes } from '@/features/route/use-routes';
 import { useDestinationStore } from '@/stores/destination-store';
+import { useNavigationStore } from '@/stores/navigation-store';
 import { type Place, usePlacesStore } from '@/stores/places-store';
+import { useSettingsStore } from '@/stores/settings-store';
 import { mapButton, radius, spacing, typography, useColors } from '@/theme';
 
 import { DESTINATION_CARD_HEIGHT, DestinationCard } from './components/destination-card';
@@ -31,6 +36,13 @@ const SHEET_HEADER_HEIGHT = 153;
 const SHEET_SPRING = { stiffness: 420, damping: 42, mass: 0.7 } as const;
 // Street level, so the pin's surroundings are recognisable.
 const DESTINATION_ZOOM = 15.5;
+// Camera tilt while navigating (degrees).
+const NAV_PITCH = 50;
+
+/** Closer at town speeds, further out on highways (MapLibre zoom levels). */
+function navZoom(speedKmh: number): number {
+  return Math.max(15, Math.min(17.5, 17.5 - speedKmh / 40));
+}
 
 /**
  * Home screen: full-screen native map, floating controls and the "Where to?"
@@ -138,6 +150,66 @@ export function HomeMap() {
     return () => subscription.remove();
   }, [destination, setDestination]);
 
+  // ── Turn-by-turn ──
+  const navRoute = useNavigationStore((s) => s.route);
+  const startNavigation = useNavigationStore((s) => s.start);
+  const stopNavigation = useNavigationStore((s) => s.stop);
+  const practiceDrive = useSettingsStore((s) => s.practiceDrive);
+  const navigating = navRoute != null;
+  const navView = useNavView((s) => s.view);
+
+  const goNow = () => {
+    const route = routes.find((r) => r.id === selectedId);
+    if (route && destination) startNavigation(route, destination, practiceDrive);
+  };
+  const endNavigation = () => {
+    stopNavigation();
+    clearDestination();
+  };
+
+  // While navigating, the camera glides (native, linear) to each new position once a
+  // second, turned to the road's direction and tilted. The car arrow is a fixed overlay
+  // at PUCK_SCREEN_FRACTION, so the top padding puts the camera's center right there.
+  useEffect(() => {
+    if (!navigating) return;
+    return useNavView.subscribe(({ view }) => {
+      if (!view) return;
+      cameraRef.current?.easeTo({
+        center: view.state.snapped,
+        bearing: view.bearing,
+        pitch: NAV_PITCH,
+        zoom: navZoom(view.speedKmh),
+        padding: { top: Math.round((2 * PUCK_SCREEN_FRACTION - 1) * windowHeight), bottom: 0, left: 0, right: 0 },
+        duration: 1000,
+        easing: 'linear',
+      });
+    });
+  }, [navigating, windowHeight]);
+
+  // Leaving navigation: level the map again and go back to following you.
+  useEffect(() => {
+    if (navigating) return;
+    cameraRef.current?.zoomTo(DEFAULT_ZOOM + 2, {
+      pitch: 0,
+      bearing: 0,
+      padding: { top: 0, bottom: 0, left: 0, right: 0 },
+      duration: 500,
+    });
+  }, [navigating]);
+
+  // Android back button while navigating asks before ending.
+  useEffect(() => {
+    if (!navigating) return;
+    const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
+      Alert.alert('End navigation?', undefined, [
+        { text: 'Keep going', style: 'cancel' },
+        { text: 'End', style: 'destructive', onPress: endNavigation },
+      ]);
+      return true;
+    });
+    return () => subscription.remove();
+  });
+
   // Showing a picked place pauses "follow me" until you tap recenter.
   const [recenteredAt, setRecenteredAt] = useState(0);
   const followActive = following && (!destination || recenteredAt > pickedAt);
@@ -154,7 +226,8 @@ export function HomeMap() {
         onDidFinishLoadingMap={hideSplash}
         onDidFailLoadingMap={hideSplash}
         // Keeps the followed location centred in the part of the map above the sheet.
-        contentInset={{ bottom: collapsed }}
+        // (Not while navigating: the camera's padding places you at the car arrow instead.)
+        contentInset={{ bottom: navigating ? 0 : collapsed }}
         compass={false}
         logo={false}
         // OpenStreetMap attribution must stay visible: put it under the sound button,
@@ -169,14 +242,18 @@ export function HomeMap() {
           initialViewState={{ center: SHAH_ALAM, zoom: DEFAULT_ZOOM }}
           // Follow position only, map stays north-up. 'heading' rotated the map with the
           // compass, which jitters constantly. The puck still shows which way you face.
-          trackUserLocation={granted && followActive ? 'default' : undefined}
+          trackUserLocation={granted && followActive && !navigating ? 'default' : undefined}
           onTrackUserLocationChange={(event) =>
             // MapLibre stops following when you pan the map yourself.
             setFollowing(event.nativeEvent.trackUserLocation != null)
           }
         />
-        {granted && <NativeUserLocation mode="heading" />}
-        <RouteLines routes={routes} selectedId={selectedId} onSelect={selectRoute} />
+        {granted && !navigating && <NativeUserLocation mode="heading" />}
+        {navRoute ? (
+          <NavRouteLine route={navRoute} />
+        ) : (
+          <RouteLines routes={routes} selectedId={selectedId} onSelect={selectRoute} />
+        )}
         {destination && (
           <Marker id="destination" lngLat={destination.coordinate} anchor="bottom">
             <DestinationPin />
@@ -184,64 +261,75 @@ export function HomeMap() {
         )}
       </Map>
 
-      <MapControls
-        sheetHeight={sheetHeight}
-        collapsedSheetHeight={collapsed}
-        following={!granted || followActive}
-        onRecenter={recenter}
-        speedKmh={speedKmh}
-        hideBottomRow={destination != null}
-      />
-
-      {blocked && !destination && (
-        <View
-          style={[
-            styles.notice,
-            {
-              top: insets.top + mapButton.size + spacing.lg,
-              backgroundColor: colors.surfaceContainerHigh,
-            },
-          ]}
-        >
-          <Text style={[typography.bodyMedium, { color: colors.onSurface }]}>
-            Location is off for JalanJer!. Turn it on to see where you are.
-          </Text>
-          <Button size="sm" onPress={() => Linking.openSettings()}>
-            Open Settings
-          </Button>
-        </View>
-      )}
-
-      {destination && (
-        <DestinationCard
-          place={destination}
-          // Below the OpenStreetMap attribution, which must stay visible.
-          top={cardTop}
-          onClose={clearDestination}
-        />
-      )}
-
-      {destination ? (
-        <RoutePreviewPanel
-          state={routesState}
-          selectedId={selectedId}
-          onSelect={selectRoute}
-          onLayout={(event) => setPanelHeight(Math.round(event.nativeEvent.layout.height))}
-        />
+      {navigating ? (
+        <>
+          <NavigationSession />
+          {navView ? <NavigationOverlay nav={navView} onEnd={endNavigation} /> : null}
+        </>
       ) : (
-        <BottomSheet
-          height={sheetHeight}
-          detents={detents}
-          header={
-            <HomeSheetHeader
-              onSearchPress={openSearch}
-              onVoicePress={() => router.push({ pathname: '/search', params: { voice: '1' } })}
-              onPlacePress={onChipPress}
+        // Everything on the home screen and in route preview (hidden while navigating).
+        <>
+          <MapControls
+            sheetHeight={sheetHeight}
+            collapsedSheetHeight={collapsed}
+            following={!granted || followActive}
+            onRecenter={recenter}
+            speedKmh={speedKmh}
+            hideBottomRow={destination != null}
+          />
+
+          {blocked && !destination && (
+            <View
+              style={[
+                styles.notice,
+                {
+                  top: insets.top + mapButton.size + spacing.lg,
+                  backgroundColor: colors.surfaceContainerHigh,
+                },
+              ]}
+            >
+              <Text style={[typography.bodyMedium, { color: colors.onSurface }]}>
+                Location is off for JalanJer!. Turn it on to see where you are.
+              </Text>
+              <Button size="sm" onPress={() => Linking.openSettings()}>
+                Open Settings
+              </Button>
+            </View>
+          )}
+
+          {destination && (
+            <DestinationCard
+              place={destination}
+              // Below the OpenStreetMap attribution, which must stay visible.
+              top={cardTop}
+              onClose={clearDestination}
             />
-          }
-        >
-          <RecentsList onPlacePress={goTo} bottomInset={insets.bottom + spacing.lg} />
-        </BottomSheet>
+          )}
+
+          {destination ? (
+            <RoutePreviewPanel
+              state={routesState}
+              selectedId={selectedId}
+              onSelect={selectRoute}
+              onLayout={(event) => setPanelHeight(Math.round(event.nativeEvent.layout.height))}
+              onGo={goNow}
+            />
+          ) : (
+            <BottomSheet
+              height={sheetHeight}
+              detents={detents}
+              header={
+                <HomeSheetHeader
+                  onSearchPress={openSearch}
+                  onVoicePress={() => router.push({ pathname: '/search', params: { voice: '1' } })}
+                  onPlacePress={onChipPress}
+                />
+              }
+            >
+              <RecentsList onPlacePress={goTo} bottomInset={insets.bottom + spacing.lg} />
+            </BottomSheet>
+          )}
+        </>
       )}
     </View>
   );

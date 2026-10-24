@@ -183,6 +183,8 @@ function VoicePage() {
 function NavigationPage() {
   const avoid = useSettingsStore((s) => s.avoid);
   const toggleAvoid = useSettingsStore((s) => s.toggleAvoid);
+  const practiceDrive = useSettingsStore((s) => s.practiceDrive);
+  const togglePracticeDrive = useSettingsStore((s) => s.togglePracticeDrive);
   return (
     <SettingsScreen title="Navigation">
       <Section
@@ -192,6 +194,12 @@ function NavigationPage() {
         <SwitchRow label="Toll roads" value={avoid.tolls} onToggle={() => toggleAvoid('tolls')} />
         <SwitchRow label="Highways" value={avoid.highways} onToggle={() => toggleAvoid('highways')} />
         <SwitchRow label="Ferries" value={avoid.ferries} onToggle={() => toggleAvoid('ferries')} />
+      </Section>
+      <Section
+        title="Try it out"
+        footer="Practice drive moves you along the route with fake GPS at 50 km/h, with voice and turn banners, so you can try navigation without driving. The Go button says Practice drive while this is on."
+      >
+        <SwitchRow label="Practice drive" detail="Simulated GPS" value={practiceDrive} onToggle={togglePracticeDrive} />
       </Section>
     </SettingsScreen>
   );
