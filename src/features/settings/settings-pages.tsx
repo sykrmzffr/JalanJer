@@ -2,6 +2,7 @@ import Constants from 'expo-constants';
 import { useRouter } from 'expo-router';
 import { Alert, Linking } from 'react-native';
 
+import { useAccountStore } from '@/features/account/account-store';
 import { usePlacesStore } from '@/stores/places-store';
 import { useSettingsStore, type ThemeSetting } from '@/stores/settings-store';
 
@@ -9,6 +10,7 @@ import { ChoiceRow, InfoRow, NavRow, Section, SettingsScreen, SwitchRow } from '
 
 // Icon badge colours, chosen to resemble the Waze settings list (not sampled from the screenshot).
 const BADGE = {
+  account: '#5B6BF0',
   general: '#2EC4D6',
   map: '#2DAA5F',
   voice: '#1FA8F0',
@@ -28,9 +30,19 @@ export function SettingsHome() {
   const theme = useSettingsStore((s) => s.theme);
   const vehicle = useSettingsStore((s) => s.vehicle);
   const open = (page: SettingsPageId) => router.push({ pathname: '/settings/[page]', params: { page } });
+  const email = useAccountStore((s) => s.session?.user.email);
 
   return (
     <SettingsScreen title="Settings">
+      <Section>
+        <NavRow
+          label={email ? 'Account' : 'Sign in'}
+          detail={email ?? 'Keep your places on all your phones'}
+          icon={{ ios: 'person.crop.circle.fill', android: 'account_circle' }}
+          iconColor={BADGE.account}
+          onPress={() => router.push('/account')}
+        />
+      </Section>
       <Section>
         <NavRow
           label="General"

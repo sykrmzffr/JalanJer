@@ -6,6 +6,7 @@ import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { FpsOverlay } from '@/dev/fps-overlay';
+import { useAccountSync } from '@/features/account/places-sync-service';
 import { useThemeSetting } from '@/features/settings/use-theme-setting';
 import { initSentry, wrapRoot } from '@/lib/sentry';
 
@@ -18,6 +19,7 @@ SplashScreen.setOptions({ fade: true, duration: 250 });
 
 function RootLayout() {
   useThemeSetting();
+  useAccountSync();
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <StatusBar style="auto" />
@@ -27,6 +29,7 @@ function RootLayout() {
         <Stack.Screen name="search" options={{ animation: 'slide_from_bottom' }} />
         <Stack.Screen name="settings/index" />
         <Stack.Screen name="settings/[page]" />
+        <Stack.Screen name="account" />
       </Stack>
       {__DEV__ && <FpsOverlay />}
     </GestureHandlerRootView>
