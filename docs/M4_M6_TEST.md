@@ -1,0 +1,51 @@
+# Test checklist: Turn-by-turn and Reports (Android)
+
+## Before you start
+
+- Supabase → **SQL Editor** → run `supabase/migrations/0002_reports.sql` (reports need it).
+- Install the newest `JalanJer-Android-release-….apk` (Actions → Android build, branch
+  `main-kdl2pb`).
+
+## A. Practice drive (at home, no driving)
+
+1. ☰ → Settings → **Navigation** → turn on **Practice drive**.
+2. Search a place 3–10 km away → the route button now says **Practice drive** → tap it.
+3. Check:
+   - [ ] Map tilts and turns with the road; the blue arrow stays in the lower part of the screen.
+   - [ ] Movement looks **smooth**, not jumping once a second. (Most important: tell me.)
+   - [ ] Black banner: arrow + distance counting down + street name. "and then" appears for quick double turns.
+   - [ ] Voice says the first instruction, then "In … meters, turn …", then the turn again just before it.
+   - [ ] Speaker button mutes/unmutes the voice.
+   - [ ] Bottom panel: arrival time, minutes and km left, counting down. "Practice drive" label.
+   - [ ] All banner arrows show (none blank). If one is blank, tell me which turn.
+   - [ ] At the end: "You have arrived", ✕ becomes ✓; tap it to finish.
+   - [ ] ✕ during the drive asks "End navigation?"; Android Back does too.
+4. Turn Practice drive **off** afterwards.
+
+## B. Real drive (passenger holds the phone, or mount it)
+
+- [ ] Turns announced at sensible moments (not too early/late).
+- [ ] Take a wrong turn on purpose: after a few seconds "Rerouting" and a new route.
+- [ ] Screen stays on.
+- [ ] Known limit: if you lock the screen, navigation pauses (background mode isn't done yet).
+
+## C. Reports
+
+1. Make sure you're signed in (Settings → Account).
+2. Tap the yellow **+** → pick **Hazard** → it closes with a buzz.
+   - [ ] A yellow-brown hazard pin appears where you are (may take up to a minute on the map).
+   - [ ] In Supabase → Table Editor → **reports**: a new row.
+3. Tap the pin: card shows "Hazard", "just now", "your report" (no Still there buttons for your own).
+4. With a second account (another phone/email): tap your pin → **Still there** / **Not there** works.
+   Two "Not there" from two accounts → the pin disappears.
+5. While navigating past someone else's report (within ~150 m): a "… still there?" card pops up and
+   hides itself after ~12 s.
+6. Signed out: + → asks you to sign in.
+
+## Send back
+
+```
+Practice drive smooth? Y/N | voice timing OK? Y/N | blank arrows? which:
+Real drive: reroute worked? Y/N | anything wrong:
+Reports: send OK? Y/N | pin shows? Y/N | votes OK? Y/N
+```
