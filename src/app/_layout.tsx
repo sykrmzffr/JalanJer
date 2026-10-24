@@ -30,6 +30,7 @@ function RootLayout() {
         <Stack.Screen name="settings/index" />
         <Stack.Screen name="settings/[page]" />
         <Stack.Screen name="account" />
+        <Stack.Screen name="report" options={{ animation: 'slide_from_bottom' }} />
       </Stack>
       {__DEV__ && <FpsOverlay />}
     </GestureHandlerRootView>

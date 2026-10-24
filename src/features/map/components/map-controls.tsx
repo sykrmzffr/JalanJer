@@ -126,7 +126,10 @@ export function MapControls({
             size={mapButton.reportSize}
             backgroundColor={colors.report}
             accessibilityLabel="Report"
-            onPress={() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)} // Reports: Milestone 6.
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+              router.push('/report');
+            }}
           >
             <Icon name={{ ios: 'plus', android: 'add' }} size={30} color={colors.onReport} weight="heavy" />
           </MapButton>

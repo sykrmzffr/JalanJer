@@ -1,4 +1,6 @@
-import { type ReactNode } from 'react';
+import * as Haptics from 'expo-haptics';
+import { useRouter } from 'expo-router';
+import { useEffect, useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -9,6 +11,12 @@ import { formatArrival, formatDuration } from '@/features/route/core/valhalla-co
 import { useSettingsStore } from '@/stores/settings-store';
 import { minTouchTarget, radius, spacing, typography, useColors } from '@/theme';
 
+import { useAccountStore } from '@/features/account/account-store';
+import { useNow } from '@/lib/use-now';
+import { ReportCard } from '@/features/reports/components/report-card';
+import { stillTherePrompt } from '@/features/reports/core/reports-core';
+import { useReportsStore } from '@/features/reports/reports-store';
+
 import type { NavigationView } from '../use-navigation';
 import { NavBanner } from './nav-banner';
 
@@ -18,12 +26,36 @@ export const PUCK_SCREEN_FRACTION = 0.68;
 type NavigationOverlayProps = {
   nav: NavigationView;
   onEnd: () => void;
-  /** Extra button above the panel on the right (report button). */
-  rightAction?: ReactNode;
 };
 
+// A "Still there?" prompt hides itself after this long.
+const PROMPT_MS = 12_000;
+
 /** Everything drawn over the map while navigating: banner, car arrow, street pill, trip panel. */
-export function NavigationOverlay({ nav, onEnd, rightAction }: NavigationOverlayProps) {
+export function NavigationOverlay({ nav, onEnd }: NavigationOverlayProps) {
+  const router = useRouter();
+  const reports = useReportsStore((s) => s.reports);
+  const answered = useReportsStore((s) => s.answered);
+  const mine = useReportsStore((s) => s.mine);
+  const signedIn = useAccountStore((s) => s.session != null);
+  const now = useNow(30_000);
+  // Prompts dismissed (or timed out) on this trip.
+  const [dismissed, setDismissed] = useState<Record<string, true>>({});
+  const prompt = signedIn
+    ? stillTherePrompt(reports, nav.state.snapped, {
+        answered: new Set([...Object.keys(answered), ...Object.keys(dismissed)]),
+        mine: new Set(Object.keys(mine)),
+        now,
+      })
+    : null;
+  const promptId = prompt?.id;
+  useEffect(() => {
+    if (!promptId) return;
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+    const timer = setTimeout(() => setDismissed((d) => ({ ...d, [promptId]: true })), PROMPT_MS);
+    return () => clearTimeout(timer);
+  }, [promptId]);
+
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const practice = nav.practice;
@@ -83,7 +115,17 @@ export function NavigationOverlay({ nav, onEnd, rightAction }: NavigationOverlay
                 color={colors.onSurface}
               />
             </Pressable>
-            {rightAction}
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Report"
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                router.push('/report');
+              }}
+              style={[styles.report, { backgroundColor: colors.report, shadowColor: colors.shadow }]}
+            >
+              <Icon name={{ ios: 'plus', android: 'add' }} size={30} color={colors.onReport} weight="heavy" />
+            </Pressable>
           </View>
         </View>
 
@@ -124,11 +166,21 @@ export function NavigationOverlay({ nav, onEnd, rightAction }: NavigationOverlay
           <View style={styles.endSpacer} />
         </View>
       </View>
+
+      {prompt ? (
+        <ReportCard
+          report={prompt}
+          bottom={insets.bottom + PROMPT_BOTTOM}
+          onClose={() => setDismissed((d) => ({ ...d, [prompt.id]: true }))}
+        />
+      ) : null}
     </View>
   );
 }
 
 const PUCK = 40;
+// Above the trip panel and the bottom row of buttons.
+const PROMPT_BOTTOM = 200;
 
 const styles = StyleSheet.create({
   puckWrap: {
@@ -162,6 +214,17 @@ const styles = StyleSheet.create({
   },
   pillText: { textAlign: 'center' },
   rightColumn: { gap: spacing.md, alignItems: 'flex-end' },
+  report: {
+    width: 64,
+    height: 64,
+    borderRadius: radius.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 6,
+  },
   round: {
     width: 56,
     height: 56,

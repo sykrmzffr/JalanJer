@@ -13,6 +13,10 @@ import { RecentsList } from '@/features/home-sheet/recents-list';
 import { NavRouteLine } from '@/features/navigation/components/nav-route-line';
 import { NavigationOverlay, PUCK_SCREEN_FRACTION } from '@/features/navigation/components/navigation-overlay';
 import { NavigationSession, useNavView } from '@/features/navigation/navigation-session';
+import { ReportCard } from '@/features/reports/components/report-card';
+import { ReportPins } from '@/features/reports/components/report-pins';
+import type { Report } from '@/features/reports/core/reports-core';
+import { useReportsRefresh } from '@/features/reports/reports-store';
 import { RouteLines } from '@/features/route/components/route-lines';
 import { RoutePreviewPanel } from '@/features/route/components/route-preview-panel';
 import { useRoutes } from '@/features/route/use-routes';
@@ -150,6 +154,10 @@ export function HomeMap() {
     return () => subscription.remove();
   }, [destination, setDestination]);
 
+  // ── Reports ──
+  useReportsRefresh();
+  const [selectedReport, setSelectedReport] = useState<Report | null>(null);
+
   // ── Turn-by-turn ──
   const navRoute = useNavigationStore((s) => s.route);
   const startNavigation = useNavigationStore((s) => s.start);
@@ -254,6 +262,7 @@ export function HomeMap() {
         ) : (
           <RouteLines routes={routes} selectedId={selectedId} onSelect={selectRoute} />
         )}
+        <ReportPins onPress={setSelectedReport} />
         {destination && (
           <Marker id="destination" lngLat={destination.coordinate} anchor="bottom">
             <DestinationPin />
@@ -331,6 +340,14 @@ export function HomeMap() {
           )}
         </>
       )}
+      {selectedReport ? (
+        <ReportCard
+          report={selectedReport}
+          // Above whatever is at the bottom: home sheet, route panel or navigation panel.
+          bottom={navigating ? insets.bottom + 200 : Math.max(panelHeight, collapsed) + spacing.md}
+          onClose={() => setSelectedReport(null)}
+        />
+      ) : null}
     </View>
   );
 }
